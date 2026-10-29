@@ -1,0 +1,68 @@
+.profile-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+  gap: 32px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border-default);
+}
+.settings-row__label {
+  padding-top: 6px;
+}
+.settings-row__label p {
+  margin-top: 4px;
+}
+.settings-row__panel {
+  gap: 20px;
+}
+.switch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.switch-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.plan-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.plan-line p {
+  margin-top: 4px;
+}
+.btn--danger {
+  background: var(--bg-surface);
+  color: var(--text-danger);
+  border-color: #e9b4b0;
+}
+.btn--danger:hover {
+  background: var(--bg-danger-subtle);
+}
+.t-success {
+  color: #247b50;
+  font-weight: 600;
+}
+.page-header__actions .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@media (max-width: 960px) {
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

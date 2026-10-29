@@ -1,0 +1,28 @@
+.match-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #c8e6c9;
+  background: var(--bg-brand-subtle);
+}
+.match-banner .list__text > span {
+  white-space: normal;
+}
+.demand-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  align-items: stretch;
+}
+@media (max-width: 768px) {
+  .match-banner {
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .demand-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

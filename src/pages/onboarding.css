@@ -1,0 +1,230 @@
+.onboarding {
+  grid-template-columns: minmax(360px, 480px) 1fr;
+}
+.onboarding__brand {
+  padding: 56px;
+  justify-content: flex-start;
+}
+.onboarding__intro {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  margin-top: 40px;
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.steps__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.steps__item > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+.steps__item .body-s {
+  opacity: 0.7;
+}
+.steps__item:not(.is-done):not(.is-current) .label-m {
+  opacity: 0.8;
+}
+.steps__dot {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.is-done .steps__dot {
+  border: 0;
+  background: var(--bg-accent);
+  color: var(--text-primary);
+}
+.is-current .steps__dot {
+  border: 0;
+  background: #fff;
+  color: var(--text-brand);
+}
+.onboarding__note {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 0.95;
+}
+.onboarding__note svg {
+  flex-shrink: 0;
+}
+
+.onboarding__form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: 640px;
+}
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.progress__labels {
+  display: flex;
+  justify-content: space-between;
+}
+.progress__bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.progress__bars span {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-muted);
+}
+.progress__bars span.is-on {
+  background: var(--bg-brand);
+}
+.onboarding__head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.onboarding__title {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.onboarding__grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.onboarding__row {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 24px;
+  align-items: start;
+}
+.onboarding__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.field-block .chip-group {
+  margin-top: 4px;
+}
+.onboarding__actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.radius-map {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 200px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--bg-brand-subtle);
+}
+.radius-map__roads {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.radius-map__label {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.radius-map__circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: rgba(46, 125, 50, 0.18);
+  border: 2px solid var(--bg-brand-hover);
+}
+.radius-map__pin {
+  display: grid;
+  place-items: center;
+  color: var(--text-brand);
+}
+
+@media (max-width: 768px) {
+  .onboarding {
+    background: var(--bg-canvas);
+  }
+  .onboarding__panel {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0 20px;
+    border-radius: 0;
+    background: var(--bg-canvas);
+  }
+  .onboarding__form {
+    flex: 1;
+    gap: 20px;
+  }
+  .onboarding__title {
+    font-size: 24px;
+    line-height: 32px;
+  }
+  .onboarding__grid2,
+  .onboarding__row {
+    grid-template-columns: 1fr;
+  }
+  .radius-map {
+    height: 150px;
+  }
+  .radius-map__circle {
+    width: 110px;
+    height: 110px;
+  }
+  .onboarding__actions {
+    position: sticky;
+    bottom: 0;
+    margin: auto -20px 0;
+    padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+    background: var(--bg-surface);
+    border-top: 1px solid var(--border-default);
+  }
+  .onboarding__continue {
+    width: 100%;
+  }
+}

@@ -1,0 +1,419 @@
+/* ---------- Button ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+}
+.btn--m {
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.btn--s {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  line-height: 16px;
+}
+.btn:active {
+  transform: translateY(1px);
+}
+.btn--block {
+  width: 100%;
+}
+.btn--primary {
+  background: var(--bg-brand);
+  color: var(--text-on-brand);
+}
+.btn--primary:hover {
+  background: var(--bg-brand-hover);
+}
+.btn--secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+  font-weight: 500;
+}
+.btn--secondary:hover {
+  background: var(--bg-subtle);
+}
+.btn--ghost {
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.btn--ghost:hover {
+  background: var(--bg-subtle);
+}
+.btn--accent {
+  background: var(--bg-accent);
+  color: var(--text-primary);
+}
+.btn--accent:hover {
+  background: #fdd835;
+}
+
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--icon-default);
+}
+a.icon-btn {
+  color: var(--icon-default);
+}
+.icon-btn:hover {
+  background: var(--bg-subtle);
+}
+
+/* ---------- Badge ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.badge--success {
+  background: #e3f3e4;
+  color: #15461a;
+}
+.badge--warning {
+  background: #fff6d6;
+  color: #7a4a00;
+}
+.badge--neutral {
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+}
+.badge--info {
+  background: var(--bg-info-subtle);
+  color: var(--text-info);
+}
+.badge--danger {
+  background: var(--bg-danger-subtle);
+  color: #831c1e;
+}
+/* "brand" = destaque do produto (Colhido hoje): o verde da marca em tom pálido, borda um passo mais escura */
+.badge--brand {
+  background: #e3f3e4;
+  color: #15461a;
+}
+
+/* ---------- Chip ---------- */
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.chip:hover {
+  border-color: var(--text-tertiary);
+}
+.chip--selected,
+.chip--selected:hover {
+  border-color: var(--bg-brand);
+  background: var(--bg-brand);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ---------- Field ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.field__label {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.field__control,
+.search-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field__control:focus-within,
+.search-input:focus-within {
+  border-color: var(--bg-brand-hover);
+  box-shadow: 0 0 0 1px var(--bg-brand-hover);
+}
+.field__control--area {
+  height: auto;
+  min-height: 96px;
+  align-items: flex-start;
+  padding: 12px 14px;
+}
+.field__icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.field__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-primary);
+}
+textarea.field__input {
+  resize: vertical;
+  min-height: 72px;
+}
+select.field__input {
+  appearance: none;
+  cursor: pointer;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+.field__input::placeholder {
+  color: var(--text-tertiary);
+}
+.field__input:focus-visible {
+  outline: 0;
+}
+.field--error .field__control {
+  border-color: var(--text-danger);
+  box-shadow: 0 0 0 1px var(--text-danger);
+}
+.field__error {
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--text-danger);
+}
+.field__error:empty {
+  display: none;
+}
+.field__hint {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--text-tertiary);
+}
+
+/* ---------- Avatar ---------- */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+.avatar--brand {
+  background: var(--bg-brand-subtle);
+  color: var(--text-brand);
+}
+.avatar--solid {
+  background: var(--bg-brand);
+  color: var(--text-on-brand);
+}
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+}
+
+/* ---------- Toggle ---------- */
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  border: 0;
+  padding: 0;
+  background: var(--border-strong);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.toggle--on {
+  background: var(--bg-brand);
+}
+.toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+.toggle--on .toggle__thumb {
+  transform: translateX(16px);
+}
+
+/* ---------- Checkbox ---------- */
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.checkbox input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.checkbox__box {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: transparent;
+  flex-shrink: 0;
+}
+.checkbox input:checked + .checkbox__box {
+  background: var(--bg-brand);
+  border-color: var(--bg-brand);
+  color: #fff;
+}
+.checkbox input:focus-visible + .checkbox__box {
+  outline: 2px solid var(--bg-brand-hover);
+  outline-offset: 2px;
+}
+
+/* ---------- Icon tile: ícone simples na cor do tom, sem quadrado tingido ---------- */
+.icon-tile {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: auto !important;
+  height: auto !important;
+  color: var(--icon-default);
+}
+.icon-tile--brand,
+.icon-tile--solid {
+  color: var(--icon-brand);
+}
+.icon-tile--accent,
+.icon-tile--accent-subtle {
+  color: var(--text-warning);
+}
+.icon-tile--info {
+  color: var(--text-info);
+}
+
+/* ---------- Tabs (sublinhado) ---------- */
+.tabs {
+  display: flex;
+  gap: 24px;
+  border-bottom: 1px solid var(--border-default);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs__item {
+  position: relative;
+  padding: 10px 0 12px;
+  border: 0;
+  background: none;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.tabs__item--active {
+  color: var(--text-brand);
+  font-weight: 600;
+}
+.tabs__item--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--bg-brand);
+}
+
+/* ---------- Segmented ---------- */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+.segmented__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.segmented__item:focus-visible {
+  outline: 2px solid var(--bg-brand-hover);
+  outline-offset: 2px;
+}
+.segmented__item--active {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: 600;
+  outline: 1px solid var(--border-default);
+  outline-offset: -1px;
+}

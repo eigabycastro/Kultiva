@@ -1,0 +1,49 @@
+.orders-toolbar {
+  flex-wrap: wrap;
+}
+.orders-date {
+  width: 260px;
+}
+.order-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+}
+.order-card__head,
+.order-card__foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.order-card__foot {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-default);
+}
+
+/* Tablet/notebook pequeno: preço unitário e data viram a segunda linha das células */
+.cell-sub {
+  display: none;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+@media (max-width: 1180px) {
+  .table .col-sec {
+    display: none;
+  }
+  .cell-sub {
+    display: block;
+  }
+  .table th,
+  .table td {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+@media (max-width: 768px) {
+  .orders-filters {
+    flex-wrap: wrap;
+  }
+}

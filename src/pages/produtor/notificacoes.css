@@ -1,0 +1,108 @@
+.notif-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 24px;
+  align-items: start;
+}
+.notif-tabs {
+  padding: 4px 24px 0;
+}
+.notif-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notif {
+  position: relative;
+  display: flex;
+  gap: 14px;
+  padding: 16px 48px 16px 24px;
+  border-top: 1px solid var(--border-default);
+}
+.notif:first-child {
+  border-top: 0;
+}
+.notif--unread {
+  background: #f6fbf6;
+}
+.notif__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.notif__action {
+  align-self: flex-start;
+  margin-top: 8px;
+}
+/* uma coluna fixa de ícones, para todas as linhas começarem no mesmo ponto */
+.notif > .icon-tile,
+.notif__icon-plain {
+  display: grid;
+  place-items: center;
+  width: 24px !important;
+  height: 22px !important;
+  margin-top: 1px;
+  color: var(--icon-brand);
+  flex-shrink: 0;
+}
+.notif > .icon-tile svg,
+.notif__icon-plain svg {
+  width: 20px;
+  height: 20px;
+}
+.notif__dot {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bg-brand-hover);
+}
+.prefs {
+  gap: 20px;
+  position: sticky;
+  top: 88px;
+}
+.prefs__list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.prefs__list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.prefs .field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-default);
+}
+
+@media (max-width: 960px) {
+  .notif-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .notif-layout .panel--flush {
+    margin: 0 -20px;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    box-shadow: none;
+  }
+  .notif {
+    padding: 14px 40px 14px 20px;
+  }
+  .notif__dot {
+    right: 20px;
+  }
+}

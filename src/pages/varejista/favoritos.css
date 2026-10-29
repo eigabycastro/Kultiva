@@ -1,0 +1,35 @@
+.fav-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.producers {
+  display: grid;
+  gap: 12px;
+}
+.producer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+}
+.producer__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.producer__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .producer {
+    flex-wrap: wrap;
+    padding: 14px;
+  }
+  .producer__actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

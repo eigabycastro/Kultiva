@@ -1,0 +1,325 @@
+/* ---------- KPIs: cards separados; o primeiro (o número que a tela responde) em verde da marca ---------- */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+.stat-card__label {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+.stat-card__value {
+  font-size: 30px;
+  line-height: 38px;
+  font-weight: 800;
+  letter-spacing: -0.8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card__foot {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stat-card__delta {
+  font-weight: 700;
+}
+.stat-card__delta--success {
+  color: #247b50;
+}
+.stat-card__delta--warning {
+  color: var(--text-warning);
+}
+.kpi-grid > .stat-card:first-child {
+  border-color: var(--bg-brand);
+  background: var(--bg-brand);
+  color: #fff;
+}
+.kpi-grid > .stat-card:first-child .stat-card__label,
+.kpi-grid > .stat-card:first-child .stat-card__foot {
+  color: rgba(255, 255, 255, 0.8);
+}
+.kpi-grid > .stat-card:first-child .stat-card__delta {
+  color: var(--bg-accent);
+}
+@media (max-width: 1100px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .kpi-grid {
+    gap: 8px;
+  }
+  .stat-card {
+    padding: 12px 14px;
+  }
+  .stat-card__value {
+    font-size: 24px;
+    line-height: 30px;
+  }
+  .stat-card__note {
+    display: none;
+  }
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.price {
+  font-variant-numeric: tabular-nums;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 800;
+  color: var(--text-brand);
+}
+
+/* ---------- Product card ---------- */
+.product-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.product-card__media {
+  position: relative;
+  height: 168px;
+  background: var(--bg-brand-subtle);
+}
+.product-card__art {
+  width: 100%;
+  height: 100%;
+}
+.product-card__placeholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #a5d6a7;
+}
+.product-card__placeholder svg {
+  width: 40px;
+  height: 40px;
+}
+.product-card__tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+.product-card__fav {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--icon-default);
+}
+.product-card__fav:hover,
+.product-card__fav.is-on {
+  color: var(--text-danger);
+}
+.product-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+.product-card__title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.product-card__name {
+  font-size: 15px;
+  line-height: 22px;
+}
+a.product-card__name:hover {
+  color: var(--text-brand);
+  text-decoration: underline;
+}
+.product-card__farm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.product-card__price {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+/* ---------- Demand card ---------- */
+.demand-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  min-width: 0;
+}
+.demand-card__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.demand-card__buyer {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.demand-card__buyer .label-m {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.demand-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.demand-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 4px 0 8px;
+}
+.demand-card__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.demand-card__meta svg {
+  color: var(--icon-default);
+}
+.demand-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+.demand-card__offer {
+  flex: 1;
+}
+
+/* ---------- Chat bubble ---------- */
+.bubble-row {
+  display: flex;
+}
+.bubble-row--out {
+  justify-content: flex-end;
+}
+.bubble {
+  max-width: min(420px, 80%);
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.bubble--in {
+  background: #eef0eb;
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+.bubble--out {
+  background: var(--bg-brand);
+  color: var(--text-on-brand);
+  border-bottom-right-radius: 4px;
+}
+.bubble__time {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 14px;
+  opacity: 0.7;
+}
+.bubble--out .bubble__time {
+  text-align: right;
+}
+
+/* ---------- Tabela ---------- */
+.table-wrap {
+  position: relative; /* contém o texto oculto (sr-only) das colunas */
+  overflow-x: auto;
+}
+.table {
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 20px;
+}
+.table th {
+  text-align: left;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-default);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.table td {
+  padding: 12px 20px;
+  border-top: 1px solid var(--rule);
+  white-space: nowrap;
+  color: var(--text-secondary);
+}
+.table tr:first-child td {
+  border-top: 0;
+}
+.table th.num,
+.table td.num {
+  text-align: right;
+}
+.table td.strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.table .order-id {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.table .with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.table tbody tr:hover td {
+  background: #fafbf9;
+}

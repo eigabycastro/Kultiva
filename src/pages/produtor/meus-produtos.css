@@ -1,0 +1,108 @@
+.count-cards {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+.count-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  text-align: left;
+}
+.count-card:hover {
+  border-color: var(--border-strong);
+}
+.count-card.is-active {
+  border: 1.5px solid var(--bg-brand);
+  background: var(--bg-brand-subtle);
+}
+.count-card__label {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--text-secondary);
+}
+.count-card__value {
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.stock-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+.stock-cell__text strong {
+  color: var(--text-primary);
+}
+.stock-cell__bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+.stock-cell__bar span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--bg-brand-hover);
+}
+.stock-cell__bar span.is-low {
+  background: #d99a00;
+}
+.offer-m-line {
+  display: none;
+  color: var(--text-secondary);
+}
+.actions-cell {
+  width: 56px;
+  text-align: right;
+}
+
+@media (max-width: 1180px) {
+  .offers-table .col-sec {
+    display: none;
+  }
+}
+@media (max-width: 1100px) {
+  .count-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 768px) {
+  .offers-table .col-m-hide {
+    display: none;
+  }
+  .offer-m-line {
+    display: block;
+  }
+  .offers-table th,
+  .offers-table td {
+    padding-left: 14px;
+    padding-right: 14px;
+    white-space: normal;
+  }
+  .offers-table .num {
+    white-space: nowrap;
+    vertical-align: top;
+  }
+  .offers-table .list__text > span {
+    white-space: normal;
+  }
+  .offers-table .num .t-tertiary {
+    display: block;
+    font-size: 12px;
+  }
+  .count-cards {
+    gap: 8px;
+  }
+  .count-card {
+    padding: 10px 12px;
+  }
+}

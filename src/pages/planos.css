@@ -1,0 +1,136 @@
+.plans {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding-top: 8px;
+}
+.plans__head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 720px;
+  text-align: center;
+}
+.plans__title {
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.plans__head > .body-m {
+  max-width: 500px;
+}
+.plans__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  width: 100%;
+  align-items: stretch;
+}
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  box-shadow: var(--elevation-1);
+}
+.plan__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.plan__desc {
+  margin-top: 4px;
+  color: var(--text-tertiary);
+}
+.plan__price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.plan__price .plan__desc {
+  margin: 0;
+}
+.plan__amount {
+  font-variant-numeric: tabular-nums;
+  font-size: 40px;
+  line-height: 48px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.plan .btn:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.plan__features {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 20px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--border-default);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-secondary);
+}
+.plan__features li {
+  display: flex;
+  gap: 10px;
+}
+.plan__check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-brand-subtle);
+  color: var(--icon-brand);
+  flex-shrink: 0;
+}
+
+.plan--featured {
+  border: 2px solid var(--bg-brand);
+}
+.plan--featured .plan__check {
+  background: var(--bg-brand);
+  color: #fff;
+}
+
+.plans__note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 960px) {
+  .plans__grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+  .plan--featured {
+    margin-top: 0;
+  }
+}
+@media (max-width: 768px) {
+  .plans {
+    padding-top: 16px;
+  }
+  .plans__title {
+    font-size: 26px;
+    line-height: 34px;
+  }
+  .plans__note {
+    border-radius: var(--radius-md);
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,54 @@
+.home-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+/* a ação fica no pé do card mais baixo, para os dois terminarem na mesma linha */
+.home-row .panel > .btn:last-child {
+  margin-top: auto;
+}
+.home-row .list__row .num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.offers-count {
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--bg-accent-subtle);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.offers-count strong {
+  font-size: 15px;
+}
+.home-products {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.partners {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.partner {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border-default);
+}
+.partner:hover {
+  border-color: var(--bg-brand-hover);
+  background: var(--bg-brand-subtle);
+}
+
+@media (max-width: 1100px) {
+  .home-row {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .home-row .list__row .badge {
+    display: none;
+  }
+}
