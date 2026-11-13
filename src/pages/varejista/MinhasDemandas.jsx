@@ -12,11 +12,13 @@ import '../pages.css'
 import '../pedidos.css'
 import '../produtor/procura.css'
 import './publicar.css'
+import { useConfirm } from '../../components/Confirm'
 
 const STATUS = { Abertas: 'ABERTA', Encerradas: 'ENCERRADA', Todas: undefined }
 
 // Lista do CRUD de Procura-se do varejista: editar, encerrar/reabrir e excluir
 export default function MinhasDemandas() {
+  const confirmar = useConfirm()
   const flash = useLocation().state?.flash
   const [tab, setTab] = useQueryState('status', 'Abertas')
   const [q, setQ] = useQueryState('q', '')
@@ -36,7 +38,7 @@ export default function MinhasDemandas() {
     }
   }
   const remove = async (d) => {
-    if (!window.confirm(`Excluir a demanda de ${d.produto}?`)) return
+    if (!(await confirmar({ titulo: `Excluir a demanda de ${d.produto}?`, mensagem: 'Os produtores deixam de vê-la no Procura-se. Não dá para desfazer.', confirmar: 'Excluir demanda', perigo: true }))) return
     try {
       await api(`/demandas/${d.id}`, { method: 'DELETE' })
       setNotice({ tone: 'success', text: `Demanda de ${d.produto} excluída.` })

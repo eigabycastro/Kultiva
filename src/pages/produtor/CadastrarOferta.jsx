@@ -154,7 +154,7 @@ export default function CadastrarOferta() {
       setSending(false)
     }
   }
-  const leave = () => confirmLeave() && navigate('/produtor/produtos')
+  const leave = async () => (await confirmLeave()) && navigate('/produtor/produtos')
 
   const preview = {
     produto: form.produtoId === NOVO ? novo.nome || 'Novo produto' : (produto?.nome ?? 'Seu produto'),

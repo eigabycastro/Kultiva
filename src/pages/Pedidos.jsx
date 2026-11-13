@@ -13,6 +13,7 @@ import { ORDER_ACTIONS, ORDER_STATUS } from '../utils/status'
 import './pages.css'
 import './pedidos.css'
 import Title from '../components/Title'
+import { useConfirm } from '../components/Confirm'
 
 const GROUPS = [
   { key: 'todos', label: 'Todos' },
@@ -55,6 +56,7 @@ function OrderActions({ order, onAction, busy }) {
 }
 
 export default function Pedidos() {
+  const confirmar = useConfirm()
   const role = useRole()
   const seller = role === 'produtor'
   const [group, setGroup] = useQueryState('grupo', 'todos')
@@ -87,9 +89,18 @@ export default function Pedidos() {
     const cfg = ORDER_ACTIONS[action]
     let motivo
     if (cfg.ask) {
-      motivo = window.prompt(`${order.codigo} · ${cfg.ask}`)
+      motivo = await confirmar({
+        titulo: `${cfg.label} o pedido ${order.codigo}?`,
+        mensagem: `${itemsText(order)} · ${qtyText(order)} · ${formatBRL(order.total)}. ${action === 'recusar' ? 'O varejista é avisado na hora.' : 'O produtor é avisado na hora.'}`,
+        campo: { label: cfg.ask, placeholder: action === 'recusar' ? 'Ex.: não consigo colher até a data pedida' : 'Ex.: comprei de outro fornecedor' },
+        confirmar: `${cfg.label} pedido`,
+        perigo: true,
+      })
       if (motivo === null) return
-    } else if (action === 'aceitar' && !window.confirm(`Aceitar ${order.codigo}? ${qtyText(order)} sairão do seu estoque agora.`)) {
+    } else if (
+      action === 'aceitar' &&
+      !(await confirmar({ titulo: `Aceitar o pedido ${order.codigo}?`, mensagem: `${qtyText(order)} de ${itemsText(order)} sairão do seu estoque agora. Total: ${formatBRL(order.total)}.`, confirmar: 'Aceitar pedido' }))
+    ) {
       return
     }
     setBusy(order.id)

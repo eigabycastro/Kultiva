@@ -8,6 +8,7 @@ import { RadiusMap } from '../Onboarding'
 import '../pages.css'
 import './oferta.css'
 import './propriedades.css'
+import { useConfirm } from '../../components/Confirm'
 
 const EMPTY = { nome: '', cep: '', endereco: '', areaHa: '', raioEntregaKm: '30 km' }
 const RADIUS = ['10 km', '20 km', '30 km', '50 km', '100 km']
@@ -21,6 +22,7 @@ const toForm = (p) => ({
 })
 
 export default function Propriedades() {
+  const confirmar = useConfirm()
   const { data, error, loading, reload, setData } = useApi('/propriedades')
   const [editing, setEditing] = useState(null) // null = fechado · 'nova' · id
   const [form, setForm] = useState(EMPTY)
@@ -90,7 +92,7 @@ export default function Propriedades() {
 
   const remove = async (p) => {
     const extra = p.totalOfertas ? ` As ${p.totalOfertas} ofertas dela também serão excluídas.` : ''
-    if (!window.confirm(`Excluir ${p.nome}?${extra}`)) return
+    if (!(await confirmar({ titulo: `Excluir ${p.nome}?`, mensagem: `Não dá para desfazer.${extra}`, confirmar: 'Excluir propriedade', perigo: true }))) return
     try {
       await api(`/propriedades/${p.id}`, { method: 'DELETE' })
       setData((l) => l.filter((x) => x.id !== p.id))

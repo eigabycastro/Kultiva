@@ -11,6 +11,7 @@ import { formatBRL, formatDay, formatQty } from '../../utils/format'
 import { offerStatusOf } from '../../utils/status'
 import '../pages.css'
 import './meus-produtos.css'
+import { useConfirm } from '../../components/Confirm'
 
 const FILTERS = [
   { key: 'todos', label: 'Todos', test: () => true },
@@ -36,6 +37,7 @@ function StockBar({ stock, total, unit }) {
 }
 
 export default function MeusProdutos() {
+  const confirmar = useConfirm()
   const flash = useLocation().state?.flash
   const [filter, setFilter] = useQueryState('status', 'todos')
   const { data, error, loading, reload, setData } = useApi('/ofertas/minhas')
@@ -58,7 +60,7 @@ export default function MeusProdutos() {
   }
 
   const remove = async (o) => {
-    if (!window.confirm(`Excluir a oferta de ${o.produto}? Não dá para desfazer.`)) return
+    if (!(await confirmar({ titulo: `Excluir a oferta de ${o.produto}?`, mensagem: 'Ela some das buscas e não dá para desfazer. Se quiser só parar de vender por um tempo, use Pausar.', confirmar: 'Excluir oferta', perigo: true }))) return
     try {
       await api(`/ofertas/${o.id}`, { method: 'DELETE' })
       setData((list) => list.filter((x) => x.id !== o.id))

@@ -114,7 +114,7 @@ export default function PublicarProcura() {
       setSending(false)
     }
   }
-  const leave = () => confirmLeave() && navigate('/varejista/procura-se')
+  const leave = async () => (await confirmLeave()) && navigate('/varejista/procura-se')
 
   const card = {
     varejista: { organizacao: usuario.organizacao, iniciais: usuario.iniciais, tipoEstabelecimento: `${usuario.tipoEstabelecimento ?? 'Varejista'} · ${usuario.cidade ?? ''}` },

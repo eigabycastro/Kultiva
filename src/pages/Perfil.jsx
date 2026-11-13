@@ -10,6 +10,7 @@ import { PERFIL_LABEL } from '../utils/status'
 import './pages.css'
 import './produtor/oferta.css'
 import './perfil.css'
+import { useConfirm } from '../components/Confirm'
 
 const RADIUS = ['10 km', '30 km', '50 km', '100 km']
 const TYPES = ['Supermercado', 'Mercado', 'Restaurante', 'Hortifruti', 'Distribuidor', 'Compra institucional']
@@ -38,6 +39,7 @@ function Section({ title, text, children }) {
 }
 
 export default function Perfil() {
+  const confirmar = useConfirm()
   const { usuario, setUsuario, sair, area } = useAuth()
   const navigate = useNavigate()
   const [base, setBase] = useState(() => toForm(usuario))
@@ -113,7 +115,7 @@ export default function Perfil() {
   }
 
   const removeAccount = async () => {
-    if (!window.confirm(`Excluir a conta de ${usuario.organizacao || usuario.nome}? Ofertas, demandas e notificações serão apagadas e não dá para desfazer.`)) return
+    if (!(await confirmar({ titulo: 'Excluir sua conta?', mensagem: `A conta de ${usuario.organizacao || usuario.nome} será apagada junto com ofertas, demandas e notificações. Não dá para desfazer.`, confirmar: 'Excluir conta', perigo: true }))) return
     try {
       await api('/auth/me', { method: 'DELETE' })
       await sair()

@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
+import { useConfirm } from '../components/Confirm'
 
-const MESSAGE = 'Você tem alterações não salvas. Sair mesmo assim?'
-
-/* Avisa antes de fechar/recarregar a aba com alterações pendentes.
-   `confirmLeave()` serve para as saídas dentro do app (Voltar, Cancelar). */
+/* Avisa antes de fechar/recarregar a aba com alterações pendentes (esse aviso é do navegador e não
+   pode ser personalizado). `confirmLeave()` serve para as saídas dentro do app (Voltar, Cancelar)
+   e usa a janela de confirmação da Kultiva: devolve uma Promise<boolean>. */
 export function useUnsavedChanges(dirty) {
+  const confirmar = useConfirm()
   useEffect(() => {
     if (!dirty) return
     const onBeforeUnload = (e) => {
@@ -15,5 +16,13 @@ export function useUnsavedChanges(dirty) {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
 
-  return () => !dirty || window.confirm(MESSAGE)
+  return async () =>
+    !dirty ||
+    confirmar({
+      titulo: 'Sair sem salvar?',
+      mensagem: 'O que você preencheu neste formulário vai se perder.',
+      confirmar: 'Sair sem salvar',
+      cancelar: 'Continuar editando',
+      perigo: true,
+    })
 }

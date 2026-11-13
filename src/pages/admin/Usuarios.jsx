@@ -11,6 +11,7 @@ import { PERFIL_LABEL } from '../../utils/status'
 import '../pages.css'
 import '../pedidos.css'
 import './admin.css'
+import { useConfirm } from '../../components/Confirm'
 
 const PROFILES = { Todos: undefined, Produtores: 'PRODUTOR', Varejistas: 'VAREJISTA', Admins: 'ADMIN' }
 const SITUATION = { Todas: undefined, Ativas: 'false', Bloqueadas: 'true' }
@@ -18,6 +19,7 @@ const PROFILE_ICON = { PRODUTOR: Sprout, VAREJISTA: Store, ADMIN: ShieldCheck }
 
 // Tela 14 · Administração de usuários (US15): listar, buscar, bloquear e desbloquear
 export default function AdminUsuarios() {
+  const confirmar = useConfirm()
   const { usuario: me } = useAuth()
   const [q, setQ] = useQueryState('q', '')
   const [profile, setProfile] = useQueryState('perfil', 'Todos')
@@ -37,7 +39,7 @@ export default function AdminUsuarios() {
 
   const toggleBlock = async (u) => {
     const bloqueado = !u.bloqueado
-    if (bloqueado && !window.confirm(`Bloquear ${u.organizacao || u.nome}? A pessoa perde o acesso na hora e as ofertas somem das buscas.`)) return
+    if (bloqueado && !(await confirmar({ titulo: `Bloquear ${u.organizacao || u.nome}?`, mensagem: 'A pessoa perde o acesso na hora e as ofertas dela somem das buscas. Dá para desbloquear depois.', confirmar: 'Bloquear', perigo: true }))) return
     try {
       const updated = await api(`/admin/usuarios/${u.id}/bloqueio`, { method: 'PATCH', body: { bloqueado } })
       setData((d) => ({ ...d, data: d.data.map((x) => (x.id === u.id ? { ...x, ...updated } : x)) }))
