@@ -1,13 +1,18 @@
 {
   "name": "kultiva",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "api:install": "npm --prefix server install",
+    "api:db": "npm --prefix server run db:local",
+    "api:setup": "npm --prefix server run db:deploy && npm --prefix server run db:seed",
+    "api": "npm --prefix server run dev",
+    "test": "npm --prefix server test"
   },
   "dependencies": {
     "lucide-react": "^1.64.0",

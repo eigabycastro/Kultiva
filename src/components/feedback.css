@@ -1,0 +1,171 @@
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+}
+.notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.notice__text {
+  flex: 1;
+  min-width: 0;
+}
+.notice--info {
+  background: var(--bg-info-subtle);
+  color: var(--text-info);
+}
+.notice--success {
+  background: var(--bg-brand-subtle);
+  color: var(--text-success);
+}
+.notice--danger {
+  background: var(--bg-danger-subtle);
+  color: var(--text-danger);
+}
+.notice--warning {
+  background: var(--bg-accent-subtle);
+  color: var(--text-warning);
+}
+.notice__close {
+  background: none;
+  border: 0;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.load-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+}
+.load-state__content.is-refreshing {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+.skeleton {
+  display: block;
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, var(--bg-subtle), var(--bg-muted), var(--bg-subtle));
+  background-size: 200% 100%;
+  animation: skeleton 1.2s ease-in-out infinite;
+}
+@keyframes skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+.panel--flush .pagination,
+.panel--flush .pagination__info {
+  padding: 12px 24px;
+}
+.pagination__pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pagination__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pagination__num {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.pagination__num:hover {
+  border-color: var(--border-strong);
+}
+.pagination__num.is-active {
+  background: var(--bg-brand);
+  border-color: var(--bg-brand);
+  color: var(--text-on-brand);
+}
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.boot {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  color: var(--text-secondary);
+}
+
+/* Botões de ação em linha nas tabelas */
+.row-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.btn--danger-ghost {
+  background: transparent;
+  color: var(--text-danger);
+}
+.btn--danger-ghost:hover {
+  background: var(--bg-danger-subtle);
+}
+
+/* Campo select com aparência de input */
+select.field__input {
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Tabelas com coluna de ações (pedidos, administração) */
+.table--compact th,
+.table--compact td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.table td.wrap {
+  white-space: normal;
+  min-width: 150px;
+}
+.table td.wrap .with-avatar {
+  align-items: center;
+}
+.table .row-actions {
+  flex-wrap: nowrap;
+}
+.demand-card__actions {
+  flex-wrap: wrap;
+}

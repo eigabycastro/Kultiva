@@ -167,3 +167,18 @@
     gap: 12px;
   }
 }
+
+/* Atalhos das contas de demonstração */
+.auth__demo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+.auth__demo-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

@@ -1,23 +1,28 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Bell, Calendar, History, Plus, Sparkle, Sparkles } from 'lucide-react'
+import { ArrowRight, Calendar, History, Plus, Sparkle, Sparkles } from 'lucide-react'
 import { Avatar, Badge, Button, Card, IconTile } from '../../components/ui'
 import { StatCard } from '../../components/cards'
+import { LoadState } from '../../components/Feedback'
 import { ProduceThumb } from '../../components/ProduceArt'
-import { nearbyDemands, orderStatus, priceForecast, producerKpis, recentOrders, users } from '../../data/mock'
-import { formatBRL } from '../../utils/format'
+import { MobileBell } from '../../components/layout/AppLayout'
+import { useAuth } from '../../auth/AuthContext'
+import { useApi } from '../../hooks/useApi'
+import { priceForecast } from '../../data/mock'
+import { formatBRL, formatBRLCompact, formatDay, formatQty } from '../../utils/format'
+import { ORDER_STATUS } from '../../utils/status'
 import '../pages.css'
 import Title from '../../components/Title'
 
-export function ForecastChart({ bars, compact }) {
-  const max = Math.max(...bars.map((b) => b.price))
+export function ForecastChart({ bars, compact, format = formatBRL }) {
+  const max = Math.max(...bars.map((b) => b.price), 1)
   return (
     <div className={compact ? 'chart chart--compact' : 'chart'}>
       {bars.map((b) => (
         <div key={b.date} className="chart__col">
-          {!compact && <span className="chart__value">{formatBRL(b.price)}</span>}
+          {!compact && <span className="chart__value">{format(b.price)}</span>}
           <span
             className={b.forecast ? 'chart__bar chart__bar--forecast' : 'chart__bar'}
-            style={{ height: Math.round((b.price / max) * (compact ? 64 : 160)) }}
+            style={{ height: Math.max(2, Math.round((b.price / max) * (compact ? 64 : 160))) }}
             title={`${b.date}: ${formatBRL(b.price)}${b.forecast ? ' (projeção)' : ''}`}
           />
           {!compact && <span className="chart__label">{b.date}</span>}
@@ -27,8 +32,23 @@ export function ForecastChart({ bars, compact }) {
   )
 }
 
+const delta = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${v}%`)
+const itemsLabel = (p) => p.itens.map((i) => i.produto).join(', ')
+const qtyLabel = (p) => p.itens.map((i) => formatQty(i.quantidade, i.unidade)).join(' + ')
+
 export default function Dashboard() {
-  const user = users.produtor
+  const { usuario } = useAuth()
+  const { data: d, error, loading, reload } = useApi('/dashboard')
+  const demands = useApi('/demandas', { pageSize: 5 })
+
+  const kpis = d && [
+    { icon: 'chart', label: 'Vendas do mês', value: formatBRL(d.totalMes), mobileValue: formatBRLCompact(d.totalMes), delta: delta(d.variacaoMes), tone: d.variacaoMes < 0 ? 'warning' : 'success', note: 'vs. mês anterior' },
+    { icon: 'truck', label: 'Pedidos ativos', value: String(d.pedidosAtivos), delta: `${d.pedidosPendentes} pendentes`, tone: d.pedidosPendentes ? 'warning' : 'success', note: 'aguardando você' },
+    { icon: 'package', label: 'Ofertas ativas', value: String(d.ofertasAtivas), delta: d.ofertasAcabando.length ? `${d.ofertasAcabando.length} acabando` : 'estoque ok', tone: d.ofertasAcabando.length ? 'warning' : 'success', note: d.ofertasAcabando.length ? 'reabasteça o estoque' : '' },
+    { icon: 'user', label: 'Clientes', mobileLabel: 'Clientes', value: String(d.parceiros), delta: `${d.pedidosEntregues} entregas`, tone: 'success', note: 'no total' },
+  ]
+  const weekly = d?.porSemana.map((s) => ({ date: formatDay(s.semana), price: s.total })) ?? []
+  const nearby = demands.data?.data ?? []
 
   return (
     <div className="page">
@@ -37,15 +57,12 @@ export default function Dashboard() {
         <div>
           <Title mobile className="h2">Visão geral</Title>
           <p className="body-s t-tertiary">
-            {user.farm} · {user.city}
+            {usuario.organizacao} · {usuario.cidade}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <Link to="/produtor/notificacoes" className="icon-btn topbar__bell" aria-label="Notificações (novas)">
-            <Bell size={20} aria-hidden />
-            <span className="topbar__dot" />
-          </Link>
-          <Avatar initials={user.initials} />
+          <MobileBell />
+          <Avatar initials={usuario.iniciais} />
         </div>
       </div>
 
@@ -53,11 +70,18 @@ export default function Dashboard() {
         <div>
           <Title className="h1">Visão geral</Title>
           <p className="body-m t-secondary">
-            {user.farm} · semana de 06 a 12/10. O tomate deve chegar a R$ 6,10/kg entre 13 e 20/10: vale programar a
-            colheita de 300 kg para essa janela.
+            {usuario.organizacao} · {usuario.cidade}/{usuario.uf}.{' '}
+            {d?.pedidosPendentes
+              ? `Você tem ${d.pedidosPendentes} ${d.pedidosPendentes === 1 ? 'pedido esperando' : 'pedidos esperando'} sua resposta.`
+              : 'Nenhum pedido esperando resposta.'}
           </p>
         </div>
         <div className="page-header__actions">
+          {d?.pedidosPendentes > 0 && (
+            <Button variant="secondary" icon={History} to="/produtor/pedidos?grupo=andamento">
+              Responder pedidos
+            </Button>
+          )}
           <Button variant="secondary" icon={Calendar} to="/produtor/calendario">
             Calendário de safra
           </Button>
@@ -67,76 +91,70 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="kpi-grid">
-        {producerKpis.map((k) => (
-          <StatCard key={k.label} {...k} />
-        ))}
-      </div>
+      <LoadState loading={loading} error={error} onRetry={reload} empty={!d} skeleton={2}>
+        <div className="kpi-grid">{kpis?.map((k) => <StatCard key={k.label} {...k} />)}</div>
+      </LoadState>
 
       <div className="dash-row">
-        <Card className="panel forecast" id="previsao">
+        <Card className="panel forecast">
           <div className="panel__head">
             <div>
-              <h2 className="h3">
-                <span className="only-desktop">Previsão de preço — {priceForecast.product}</span>
-                <span className="only-mobile">Previsão — {priceForecast.product}</span>
-              </h2>
-              <p className="body-s t-tertiary">
-                <span className="only-desktop">R$/kg · histórico das últimas 6 semanas + projeção de 3 semanas</span>
-                <span className="only-mobile">R$/kg · 6 semanas + projeção</span>
-              </p>
+              <h2 className="h3">Vendas por semana</h2>
+              <p className="body-s t-tertiary">Pedidos aceitos nas últimas 8 semanas (R$)</p>
             </div>
-            <Badge tone="warning" icon={Sparkle}>
-              <span className="only-desktop">Previsão IA</span>
-              <span className="only-mobile">IA</span>
-            </Badge>
+            <Badge tone="success">{d ? formatBRL(weekly.reduce((s, b) => s + b.price, 0)) : '—'}</Badge>
           </div>
-          <div className="only-desktop">
-            <ForecastChart bars={priceForecast.bars} />
-          </div>
-          <div className="only-mobile">
-            <ForecastChart bars={priceForecast.bars} compact />
-          </div>
-          <div className="legend body-s t-secondary only-desktop">
-            <span>
-              <i className="legend__dot" style={{ background: 'var(--bg-brand-hover)' }} />
-              Preço praticado
-            </span>
-            <span>
-              <i className="legend__dot" style={{ background: 'var(--bg-accent)' }} />
-              Projeção da IA
-            </span>
-          </div>
-          <div className="ai-tip">
-            <IconTile icon={Sparkles} tone="accent" className="only-desktop" />
-            <Sparkles size={16} className="only-mobile" aria-hidden />
-            <div>
-              <p className="label-m only-desktop">Melhor janela de venda: 13 a 20/out</p>
-              <p className="body-s only-desktop">
-                Preço estimado de R$ 6,10/kg (+17%). Programe a colheita de 300 kg para essa semana.
-              </p>
-              <p className="label-s only-mobile">Melhor janela: 13–20/out · R$ 6,10/kg (+17%)</p>
-            </div>
-          </div>
+          {d && (
+            <>
+              <div className="only-desktop">
+                <ForecastChart bars={weekly} format={formatBRLCompact} />
+              </div>
+              <div className="only-mobile">
+                <ForecastChart bars={weekly} compact />
+              </div>
+            </>
+          )}
+          {d?.porProduto.length > 0 && (
+            <ul className="list">
+              {d.porProduto.slice(0, 3).map((p) => (
+                <li key={p.produto} className="list__row">
+                  <ProduceThumb kind={p.kind} size={32} />
+                  <div className="list__text">
+                    <span className="label-m">{p.produto}</span>
+                    <span className="body-s t-tertiary">
+                      {formatQty(p.quantidade, p.unidade)} · preço médio {formatBRL(p.precoMedio)}
+                    </span>
+                  </div>
+                  <span className="label-m num">{formatBRL(p.total)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card className="panel nearby only-desktop">
           <div>
             <h2 className="h3">Procura-se perto de você</h2>
-            <p className="body-s t-tertiary">Demandas abertas no seu raio de 30 km</p>
+            <p className="body-s t-tertiary">Demandas abertas que alcançam suas propriedades</p>
           </div>
-          <ul className="list">
-            {nearbyDemands.map((d) => (
-              <li key={d.id} className="list__row">
-                <ProduceThumb kind={d.kind} size={40} />
-                <div className="list__text">
-                  <span className="label-m">{d.short}</span>
-                  <span className="body-s t-tertiary">{d.mobileSubtitle}</span>
-                </div>
-                <Badge tone={d.tone}>{d.status}</Badge>
-              </li>
-            ))}
-          </ul>
+          <LoadState loading={demands.loading} error={demands.error} empty={nearby.length === 0} emptyText="Nenhuma demanda aberta na sua região agora.">
+            <ul className="list">
+              {nearby.map((x) => (
+                <li key={x.id} className="list__row">
+                  <ProduceThumb kind={x.kind} size={40} />
+                  <div className="list__text">
+                    <span className="label-m">
+                      {x.produto} · {formatQty(x.quantidade, x.unidade)}
+                    </span>
+                    <span className="body-s t-tertiary">
+                      {x.varejista.organizacao} · {Math.round(x.distanciaKm)} km · até {formatDay(x.prazo)}
+                    </span>
+                  </div>
+                  <Badge tone={x.compativel ? 'success' : x.urgente ? 'warning' : 'info'}>{x.compativel ? 'Compatível' : x.urgente ? 'Urgente' : 'Aberta'}</Badge>
+                </li>
+              ))}
+            </ul>
+          </LoadState>
           <Button variant="secondary" block icon={ArrowRight} to="/produtor/procura-se" className="nearby__cta">
             Ver todas as demandas
           </Button>
@@ -152,14 +170,18 @@ export default function Dashboard() {
           </Link>
         </div>
         <div className="stack-8">
-          {nearbyDemands.slice(0, 2).map((d) => (
-            <Card key={d.id} className="m-row-card">
-              <ProduceThumb kind={d.kind} size={36} />
+          {nearby.slice(0, 2).map((x) => (
+            <Card key={x.id} className="m-row-card">
+              <ProduceThumb kind={x.kind} size={36} />
               <div className="list__text">
-                <span className="label-m">{d.short}</span>
-                <span className="body-s t-tertiary">{d.mobileSubtitle}</span>
+                <span className="label-m">
+                  {x.produto} · {formatQty(x.quantidade, x.unidade)}
+                </span>
+                <span className="body-s t-tertiary">
+                  {x.varejista.organizacao} · {Math.round(x.distanciaKm)} km
+                </span>
               </div>
-              <Badge tone={d.tone}>{d.status}</Badge>
+              <Badge tone={x.compativel ? 'success' : 'info'}>{x.compativel ? 'Compatível' : 'Aberta'}</Badge>
             </Card>
           ))}
         </div>
@@ -172,43 +194,72 @@ export default function Dashboard() {
             Ver histórico
           </Button>
         </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Pedido</th>
-                <th>Comprador</th>
-                <th>Produto</th>
-                <th className="num">Quantidade</th>
-                <th className="num">Valor</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentOrders.map((o) => (
-                <tr key={o.id}>
-                  <td className="order-id">{o.id}</td>
-                  <td>
-                    <span className="with-avatar">
-                      <Avatar initials={o.initials} size={32} />
-                      {o.buyer}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="with-avatar">
-                      <ProduceThumb kind={o.kind} size={24} radius={6} />
-                      {o.product}
-                    </span>
-                  </td>
-                  <td className="num">{o.qty}</td>
-                  <td className="strong num">{o.value}</td>
-                  <td>
-                    <Badge tone={orderStatus[o.status].tone}>{orderStatus[o.status].label}</Badge>
-                  </td>
+        <LoadState loading={loading} empty={!d?.pedidosRecentes.length} emptyText="Os pedidos que você receber aparecem aqui.">
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Pedido</th>
+                  <th>Comprador</th>
+                  <th>Produto</th>
+                  <th className="num">Quantidade</th>
+                  <th className="num">Valor</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {d?.pedidosRecentes.map((p) => (
+                  <tr key={p.id}>
+                    <td className="order-id">
+                      <Link to={`/produtor/pedidos?q=${encodeURIComponent(p.codigo)}`}>{p.codigo}</Link>
+                    </td>
+                    <td>
+                      <span className="with-avatar">
+                        <Avatar initials={p.varejista.iniciais} size={32} />
+                        {p.varejista.organizacao}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="with-avatar">
+                        <ProduceThumb kind={p.itens[0]?.kind} size={24} radius={6} />
+                        {itemsLabel(p)}
+                      </span>
+                    </td>
+                    <td className="num">{qtyLabel(p)}</td>
+                    <td className="strong num">{formatBRL(p.total)}</td>
+                    <td>
+                      <Badge tone={ORDER_STATUS[p.status].tone}>{ORDER_STATUS[p.status].short}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </LoadState>
+      </Card>
+
+      {/* Previsão de preço com IA: ponto de complexidade opcional (Release 4). Ainda usa dados de exemplo. */}
+      <Card className="panel forecast" id="previsao">
+        <div className="panel__head">
+          <div>
+            <h2 className="h3">Previsão de preço — {priceForecast.product}</h2>
+            <p className="body-s t-tertiary">Prévia do módulo de IA (dados de exemplo, chega na Release 4)</p>
+          </div>
+          <Badge tone="warning" icon={Sparkle}>
+            Em breve
+          </Badge>
+        </div>
+        <div className="only-desktop">
+          <ForecastChart bars={priceForecast.bars} />
+        </div>
+        <div className="ai-tip">
+          <IconTile icon={Sparkles} tone="accent" className="only-desktop" />
+          <div>
+            <p className="label-m">A IA vai estimar a melhor janela de venda a partir do histórico de pedidos.</p>
+            <Link to="/produtor/previsao" className="body-s t-brand">
+              Ver prévia da Previsão IA
+            </Link>
+          </div>
         </div>
       </Card>
     </div>

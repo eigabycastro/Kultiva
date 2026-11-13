@@ -1,35 +1,37 @@
-import { useLocation } from 'react-router-dom'
-import { Check, TrendingUp, Truck } from 'lucide-react'
+import { Navigate, useLocation } from 'react-router-dom'
+import { Clock, Search, Truck } from 'lucide-react'
 import { Button } from '../components/ui'
+import { formatBRL, formatQty, formatWeekday } from '../utils/format'
 import './pedido-confirmado.css'
 
-const ROWS = [
-  ['Pedido', '#KT-1042'],
-  ['Quantidade', '120 maços'],
-  ['Entrega', 'Qui, 09/10 · 7h–10h'],
-  ['Frete', 'Incluso'],
-]
-
+// Tela exibida logo depois que o varejista envia um pedido (recebe o pedido criado via navigation state)
 export default function PedidoConfirmado() {
-  const role = useLocation().state?.role ?? 'varejista'
+  const { state } = useLocation()
+  const pedido = state?.pedido
+  if (!pedido) return <Navigate to="/varejista/pedidos" replace />
+
+  const rows = [
+    ['Pedido', pedido.codigo],
+    ...pedido.itens.map((i) => [i.produto, `${formatQty(i.quantidade, i.unidade)} × ${formatBRL(i.precoUnitario)}`]),
+    ['Entrega', pedido.dataEntrega ? formatWeekday(pedido.dataEntrega) : 'A combinar'],
+    ['Status', 'Aguardando o produtor'],
+  ]
 
   return (
     <div className="confirm">
       <div className="confirm__card">
         <span className="confirm__icon">
           <span>
-            <Check size={32} strokeWidth={3} aria-hidden />
+            <Clock size={32} strokeWidth={2.5} aria-hidden />
           </span>
         </span>
-        <h1 className="h1">Pedido fechado!</h1>
+        <h1 className="h1">Pedido enviado!</h1>
         <p className="body-m t-secondary confirm__lead">
-          {role === 'varejista'
-            ? 'João Silva vai separar 120 maços de alface crespa para quinta-feira, 09/10.'
-            : 'Supermercado Mais confirmou 120 maços de alface crespa para quinta-feira, 09/10.'}
+          {pedido.produtor.organizacao} foi avisado e vai aceitar ou recusar. Quando aceitar, o estoque é reservado para você.
         </p>
 
         <dl className="confirm__summary">
-          {ROWS.map(([k, v]) => (
+          {rows.map(([k, v]) => (
             <div key={k}>
               <dt>{k}</dt>
               <dd>{v}</dd>
@@ -37,21 +39,16 @@ export default function PedidoConfirmado() {
           ))}
           <div className="confirm__total">
             <dt>Total</dt>
-            <dd>R$ 384,00</dd>
+            <dd>{formatBRL(pedido.total)}</dd>
           </div>
         </dl>
 
-        <div className="confirm__savings body-s">
-          <TrendingUp size={16} aria-hidden />
-          Você economizou ~R$ 96 vs. preço médio de atravessador.
-        </div>
-
         <div className="confirm__actions">
-          <Button block icon={Truck} to={`/${role}/pedidos`}>
+          <Button block icon={Truck} to="/varejista/pedidos">
             Ver meus pedidos
           </Button>
-          <Button block variant="ghost" to={`/${role}/negociacoes`}>
-            Voltar ao chat
+          <Button block variant="ghost" icon={Search} to="/varejista/buscar">
+            Continuar comprando
           </Button>
         </div>
       </div>

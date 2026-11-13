@@ -1,20 +1,29 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Building2, House, Mail, MapPin, Phone, User } from 'lucide-react'
-import { useRole } from '../components/layout/AppLayout'
-import { Avatar, Badge, Button, Card, ChipGroup, Field, Toggle } from '../components/ui'
-import { profiles, users } from '../data/mock'
+import { Building2, House, Lock, Mail, MapPin, Phone, Store, User } from 'lucide-react'
+import { Avatar, Badge, Button, Card, ChipGroup, Field } from '../components/ui'
+import { Notice } from '../components/Feedback'
+import { api } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import { PERFIL_LABEL } from '../utils/status'
 import './pages.css'
 import './produtor/oferta.css'
 import './perfil.css'
 
-const ALERTS = [
-  { key: 'demandas', label: 'Demandas e ofertas novas', on: true },
-  { key: 'pedidos', label: 'Pedidos e entregas', on: true },
-  { key: 'mensagens', label: 'Mensagens de negociação', on: true },
-  { key: 'precos', label: 'Variação de preço acima de 5%', on: false },
-]
+const RADIUS = ['10 km', '30 km', '50 km', '100 km']
+const TYPES = ['Supermercado', 'Mercado', 'Restaurante', 'Hortifruti', 'Distribuidor', 'Compra institucional']
+
+const toForm = (u) => ({
+  nome: u.nome ?? '',
+  email: u.email ?? '',
+  telefone: u.telefone ?? '',
+  organizacao: u.organizacao ?? '',
+  tipoEstabelecimento: u.tipoEstabelecimento ?? '',
+  cep: u.cep ?? '',
+  endereco: u.endereco ?? '',
+  raio: `${u.raioKm} km`,
+})
 
 function Section({ title, text, children }) {
   return (
@@ -29,29 +38,88 @@ function Section({ title, text, children }) {
 }
 
 export default function Perfil() {
-  const role = useRole()
+  const { usuario, setUsuario, sair, area } = useAuth()
   const navigate = useNavigate()
-  const base = profiles[role]
+  const [base, setBase] = useState(() => toForm(usuario))
   const [form, setForm] = useState(base)
-  const [radius, setRadius] = useState('30 km')
-  const [alerts, setAlerts] = useState(Object.fromEntries(ALERTS.map((a) => [a.key, a.on])))
-  const [saved, setSaved] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [notice, setNotice] = useState(null)
+  const [cepInfo, setCepInfo] = useState(usuario.cidade ? `${usuario.cidade}/${usuario.uf}` : '')
+  const [pwd, setPwd] = useState({ senhaAtual: '', novaSenha: '' })
+  const [sending, setSending] = useState(false)
   const dirty = JSON.stringify(form) !== JSON.stringify(base)
-  useUnsavedChanges(dirty && !saved)
+  useUnsavedChanges(dirty)
+  const produtor = usuario.perfil === 'PRODUTOR'
+  const admin = usuario.perfil === 'ADMIN'
 
   const set = (k) => (e) => {
-    setForm({ ...form, [k]: e.target.value })
-    setSaved(false)
+    setForm({ ...form, [k]: e?.target ? e.target.value : e })
+    setErrors({ ...errors, [k]: undefined })
   }
-  const save = (e) => {
+  const onCep = async (e) => {
+    set('cep')(e)
+    const digits = e.target.value.replace(/\D/g, '')
+    if (digits.length !== 8) return
+    try {
+      const r = await api(`/cep/${digits}`)
+      setCepInfo(`${r.cidade}/${r.uf}`)
+      setForm((f) => ({ ...f, cep: r.cep, endereco: r.endereco || f.endereco }))
+    } catch (err) {
+      setErrors((x) => ({ ...x, cep: err.message }))
+    }
+  }
+
+  const save = async (e) => {
     e.preventDefault()
-    // TODO(back-end): PUT /perfil
-    setSaved(true)
+    setSending(true)
+    setNotice(null)
+    try {
+      const u = await api('/auth/me', {
+        method: 'PUT',
+        body: {
+          nome: form.nome,
+          email: form.email,
+          telefone: form.telefone || null,
+          organizacao: form.organizacao,
+          tipoEstabelecimento: produtor ? undefined : form.tipoEstabelecimento || null,
+          endereco: form.endereco || null,
+          cep: form.cep || undefined,
+          raioKm: Number.parseInt(form.raio, 10),
+        },
+      })
+      setUsuario(u)
+      const next = toForm(u)
+      setBase(next)
+      setForm(next)
+      setNotice({ tone: 'success', text: 'Alterações salvas.' })
+    } catch (err) {
+      setErrors(err.porCampo)
+      setNotice({ tone: 'danger', text: err.message })
+    } finally {
+      setSending(false)
+    }
   }
-  const removeAccount = () => {
-    // TODO(back-end): DELETE /conta
-    if (window.confirm(`Excluir a conta de ${base.org}? Suas ofertas, pedidos e conversas serão apagados e não dá para desfazer.`)) {
-      navigate('/login')
+
+  const changePassword = async () => {
+    if (pwd.novaSenha.length < 8) return setErrors({ novaSenha: 'A nova senha precisa de pelo menos 8 caracteres.' })
+    try {
+      await api('/auth/me', { method: 'PUT', body: pwd })
+      setPwd({ senhaAtual: '', novaSenha: '' })
+      setNotice({ tone: 'success', text: 'Senha alterada.' })
+    } catch (err) {
+      setErrors(err.porCampo)
+      setNotice({ tone: 'danger', text: err.message })
+    }
+  }
+
+  const removeAccount = async () => {
+    if (!window.confirm(`Excluir a conta de ${usuario.organizacao || usuario.nome}? Ofertas, demandas e notificações serão apagadas e não dá para desfazer.`)) return
+    try {
+      await api('/auth/me', { method: 'DELETE' })
+      await sair()
+      navigate('/login', { replace: true })
+    } catch (err) {
+      setNotice({ tone: 'danger', text: err.message })
     }
   }
 
@@ -59,87 +127,101 @@ export default function Perfil() {
     <form className="page" onSubmit={save} noValidate>
       <header className="page-header">
         <div className="profile-head">
-          <Avatar initials={users[role].initials} size={56} />
+          <Avatar initials={usuario.iniciais} size={56} />
           <div>
             <h1 className="h1">Perfil e configurações</h1>
             <p className="body-m t-secondary">
-              {base.org} · {role === 'produtor' ? 'Produtor rural' : 'Varejista'} · plano {base.plan}
+              {usuario.organizacao} · {PERFIL_LABEL[usuario.perfil]} · plano {usuario.plano}
             </p>
           </div>
         </div>
         <div className="page-header__actions">
-          <span className="body-s t-success" aria-live="polite">
-            {saved ? 'Alterações salvas' : ''}
-          </span>
-          <Button type="submit" disabled={!dirty || saved}>
-            Salvar alterações
+          <Button type="submit" disabled={!dirty || sending}>
+            {sending ? 'Salvando…' : 'Salvar alterações'}
           </Button>
         </div>
       </header>
 
-      <Section title="Dados da conta" text="Quem responde pela conta e como os compradores falam com você.">
+      {notice && (
+        <Notice tone={notice.tone} onClose={() => setNotice(null)}>
+          {notice.text}
+        </Notice>
+      )}
+
+      <Section title="Dados da conta" text="Quem responde pela conta e como os parceiros falam com você.">
         <div className="grid-2">
-          <Field label="Nome" icon={User} name="name" value={form.name} onChange={set('name')} autoComplete="name" />
-          <Field
-            label="E-mail"
-            icon={Mail}
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={set('email')}
-            autoComplete="email"
-            spellCheck={false}
-          />
-          <Field label="Telefone / WhatsApp" icon={Phone} name="phone" type="tel" value={form.phone} onChange={set('phone')} autoComplete="tel" />
-          <Field label="Documento" icon={Building2} name="doc" value={form.doc} readOnly hint="Para alterar o documento, fale com o suporte." />
+          <Field label="Nome" icon={User} name="nome" value={form.nome} onChange={set('nome')} error={errors.nome} autoComplete="name" />
+          <Field label="E-mail" icon={Mail} name="email" type="email" value={form.email} onChange={set('email')} error={errors.email} autoComplete="email" spellCheck={false} />
+          <Field label="Telefone / WhatsApp" icon={Phone} name="telefone" type="tel" value={form.telefone} onChange={set('telefone')} autoComplete="tel" />
+          <Field label="Documento" icon={Building2} name="doc" value={usuario.documento ?? '—'} readOnly hint="Para alterar o documento, fale com o suporte." />
         </div>
       </Section>
 
-      <Section
-        title={role === 'produtor' ? 'Propriedade' : 'Empresa'}
-        text={role === 'produtor' ? 'Onde você produz e até onde entrega.' : 'Onde você recebe as entregas.'}
-      >
-        <div className="grid-2">
-          <Field label={role === 'produtor' ? 'Nome da propriedade' : 'Razão social'} icon={House} name="org" value={form.org} onChange={set('org')} />
-          <Field label="Endereço" icon={MapPin} name="address" value={form.address} onChange={set('address')} autoComplete="street-address" />
-        </div>
-        <div className="field-block">
-          <span className="field__label">{role === 'produtor' ? 'Raio de entrega' : 'Buscar produtores em até'}</span>
-          <ChipGroup label="Raio" options={['10 km', '30 km', '50 km', '100 km']} value={radius} onChange={setRadius} />
-        </div>
-      </Section>
-
-      <Section title="Notificações" text="O que chega no seu celular. Cada opção salva sozinha.">
-        <ul className="switch-list">
-          {ALERTS.map((a) => (
-            <li key={a.key}>
-              <span className="body-m">{a.label}</span>
-              <Toggle checked={alerts[a.key]} onChange={(v) => setAlerts({ ...alerts, [a.key]: v })} label={a.label} />
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section title="Plano" text="O que está incluído hoje e o que o Premium acrescenta.">
-        <div className="plan-line">
-          <div>
-            <span className="label-m">Plano {base.plan}</span> <Badge tone="success">Atual</Badge>
-            <p className="body-s t-secondary">Cadastro de produtos, busca por região, chat e Procura-se.</p>
+      {!admin && (
+        <Section
+          title={produtor ? 'Endereço principal' : 'Empresa'}
+          text={produtor ? 'Suas propriedades ficam na tela Propriedades.' : 'Onde você recebe as entregas. A distância até os produtores é calculada daqui.'}
+        >
+          <div className="grid-2">
+            <Field label={produtor ? 'Nome do sítio / empresa' : 'Nome do estabelecimento'} icon={House} name="organizacao" value={form.organizacao} onChange={set('organizacao')} error={errors.organizacao} />
+            {!produtor && (
+              <Field label="Tipo de estabelecimento" icon={Store}>
+                <select className="field__input" value={form.tipoEstabelecimento} onChange={set('tipoEstabelecimento')}>
+                  {TYPES.map((t) => (
+                    <option key={t}>{t}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            <Field label="CEP" icon={MapPin} name="cep" inputMode="numeric" value={form.cep} onChange={onCep} error={errors.cep} hint={cepInfo} />
+            <Field label="Endereço" icon={MapPin} name="endereco" value={form.endereco} onChange={set('endereco')} autoComplete="street-address" />
           </div>
-          <Button variant="accent" to={`/${role}/planos`}>
-            Conhecer o Premium
-          </Button>
+          <div className="field-block">
+            <span className="field__label">{produtor ? 'Raio de entrega padrão' : 'Buscar produtores em até'}</span>
+            <ChipGroup label="Raio" options={RADIUS} value={form.raio} onChange={set('raio')} />
+          </div>
+          {produtor && (
+            <Button variant="secondary" to="/produtor/propriedades">
+              Gerenciar propriedades
+            </Button>
+          )}
+        </Section>
+      )}
+
+      <Section title="Senha" text="Use pelo menos 8 caracteres.">
+        <div className="grid-2">
+          <Field label="Senha atual" icon={Lock} type="password" autoComplete="current-password" value={pwd.senhaAtual} onChange={(e) => setPwd({ ...pwd, senhaAtual: e.target.value })} error={errors.senhaAtual} />
+          <Field label="Nova senha" icon={Lock} type="password" autoComplete="new-password" value={pwd.novaSenha} onChange={(e) => setPwd({ ...pwd, novaSenha: e.target.value })} error={errors.novaSenha} />
         </div>
+        <Button variant="secondary" onClick={changePassword} disabled={!pwd.senhaAtual || !pwd.novaSenha}>
+          Alterar senha
+        </Button>
       </Section>
 
-      <Section title="Excluir conta" text="Apaga ofertas, pedidos e conversas. Não dá para desfazer.">
-        <div className="plan-line">
-          <p className="body-s t-secondary">Pedidos em andamento precisam ser concluídos ou cancelados antes.</p>
-          <button type="button" className="btn btn--m btn--danger" onClick={removeAccount}>
-            Excluir conta de {base.org}
-          </button>
-        </div>
-      </Section>
+      {!admin && (
+        <Section title="Plano" text="O que está incluído hoje e o que o Premium acrescenta.">
+          <div className="plan-line">
+            <div>
+              <span className="label-m">Plano {usuario.plano}</span> <Badge tone="success">Atual</Badge>
+              <p className="body-s t-secondary">Cadastro de produtos, busca por região, pedidos e Procura-se.</p>
+            </div>
+            <Button variant="accent" to={`/${area}/planos`}>
+              Conhecer o Premium
+            </Button>
+          </div>
+        </Section>
+      )}
+
+      {!admin && (
+        <Section title="Excluir conta" text="Apaga ofertas, demandas e notificações. Não dá para desfazer.">
+          <div className="plan-line">
+            <p className="body-s t-secondary">Contas com pedidos no histórico precisam falar com o suporte para encerrar.</p>
+            <button type="button" className="btn btn--m btn--danger" onClick={removeAccount}>
+              Excluir conta
+            </button>
+          </div>
+        </Section>
+      )}
     </form>
   )
 }

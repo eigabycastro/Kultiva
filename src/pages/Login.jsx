@@ -1,10 +1,20 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Check, Lock, Mail, Sprout, Store } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Check, Lock, Mail, ShieldCheck, Sprout, Store } from 'lucide-react'
 import Logo from '../components/Logo'
-import { Button, Checkbox, Field, Segmented } from '../components/ui'
+import { Button, Checkbox, Field } from '../components/ui'
+import { Notice } from '../components/Feedback'
 import Title from '../components/Title'
+import { homeDe, useAuth } from '../auth/AuthContext'
 import './auth.css'
+
+// Contas criadas pelo seed (server/prisma/seed.js) para a demonstração
+const DEMO = [
+  { label: 'Produtor', icon: Sprout, email: 'joao@sitioboavista.com.br' },
+  { label: 'Varejista', icon: Store, email: 'compras@mercadomais.com.br' },
+  { label: 'Admin', icon: ShieldCheck, email: 'admin@kultiva.com.br' },
+]
+const DEMO_PASSWORD = 'kultiva123'
 
 const BENEFITS = [
   'Estoque em tempo real, direto da colheita',
@@ -14,13 +24,35 @@ const BENEFITS = [
 
 export default function Login() {
   const navigate = useNavigate()
-  const [role, setRole] = useState('produtor')
+  const from = useLocation().state?.de
+  const { entrar } = useAuth()
   const [remember, setRemember] = useState(true)
+  const [form, setForm] = useState({ email: '', senha: '' })
+  const [errors, setErrors] = useState({})
+  const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
 
-  const submit = (e) => {
+  const set = (k) => (e) => {
+    setForm({ ...form, [k]: e.target.value })
+    setErrors({ ...errors, [k]: undefined })
+  }
+
+  const submit = async (e) => {
     e.preventDefault()
-    // TODO(back-end): autenticar via API antes de redirecionar
-    navigate(role === 'produtor' ? '/produtor' : '/varejista')
+    const found = {}
+    if (!form.email.trim()) found.email = 'Informe o e-mail.'
+    if (!form.senha) found.senha = 'Informe a senha.'
+    setErrors(found)
+    if (Object.keys(found).length) return
+    setSending(true)
+    setError('')
+    try {
+      const usuario = await entrar(form.email, form.senha, remember)
+      navigate(from && from.startsWith(homeDe(usuario)) ? from : homeDe(usuario), { replace: true })
+    } catch (err) {
+      setError(err.message)
+      setSending(false)
+    }
   }
 
   return (
@@ -64,15 +96,7 @@ export default function Login() {
             <p className="body-m t-secondary only-desktop">Entre para negociar direto com quem produz e quem compra.</p>
           </header>
 
-          <Segmented
-            label="Perfil"
-            value={role}
-            onChange={setRole}
-            options={[
-              { value: 'produtor', label: <><span className="only-desktop">Sou produtor</span><span className="only-mobile">Produtor</span></>, icon: Sprout },
-              { value: 'varejista', label: <><span className="only-desktop">Sou varejista</span><span className="only-mobile">Varejista</span></>, icon: Store },
-            ]}
-          />
+          <Notice tone="danger">{error}</Notice>
 
           <Field
             label="E-mail"
@@ -83,6 +107,9 @@ export default function Login() {
             autoComplete="email"
             spellCheck={false}
             autoCapitalize="none"
+            value={form.email}
+            onChange={set('email')}
+            error={errors.email}
           />
           <Field
             label="Senha"
@@ -91,6 +118,9 @@ export default function Login() {
             name="password"
             placeholder="••••••••••"
             autoComplete="current-password"
+            value={form.senha}
+            onChange={set('senha')}
+            error={errors.senha}
           />
 
           <div className="auth__options">
@@ -99,15 +129,18 @@ export default function Login() {
                 Lembrar de mim
               </Checkbox>
             </span>
-            {/* TODO(back-end): enviar e-mail de recuperação de senha */}
-            <button type="button" className="link-btn label-m auth__forgot">
+            <button
+              type="button"
+              className="link-btn label-m auth__forgot"
+              onClick={() => setError('A recuperação de senha por e-mail chega na próxima versão. Fale com a equipe Kultiva.')}
+            >
               Esqueci minha senha
             </button>
           </div>
 
           <div className="auth__actions">
-            <Button type="submit" block>
-              Entrar
+            <Button type="submit" block disabled={sending}>
+              {sending ? 'Entrando…' : 'Entrar'}
             </Button>
             <div className="auth__divider only-desktop">
               <span />
@@ -117,6 +150,26 @@ export default function Login() {
             <Button as={Link} to="/cadastro" variant="secondary" block>
               Criar conta grátis
             </Button>
+          </div>
+
+          <div className="auth__demo">
+            <span className="body-s t-tertiary">Contas de demonstração (senha {DEMO_PASSWORD}):</span>
+            <div className="auth__demo-list">
+              {DEMO.map(({ label, icon: Icon, email }) => (
+                <button
+                  key={email}
+                  type="button"
+                  className="chip"
+                  onClick={() => {
+                    setForm({ email, senha: DEMO_PASSWORD })
+                    setErrors({})
+                  }}
+                >
+                  <Icon size={14} aria-hidden />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <p className="body-s t-tertiary auth__terms only-desktop">

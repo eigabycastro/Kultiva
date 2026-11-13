@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Star } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { Avatar, Button, Card, Tabs } from '../../components/ui'
 import { ProductCard } from '../../components/cards'
-import { favoriteProducers, favoriteProductIds, products } from '../../data/mock'
+import { LoadState } from '../../components/Feedback'
+import { api } from '../../api/client'
+import { useApi } from '../../hooks/useApi'
 import { useQueryState } from '../../hooks/useQueryState'
 import '../pages.css'
 import './buscar.css'
@@ -12,7 +14,19 @@ const TABS = ['Produtos', 'Produtores']
 
 export default function Favoritos() {
   const [tab, setTab] = useQueryState('aba', TABS[0])
-  const favs = products.filter((p) => favoriteProductIds.includes(p.id))
+  const { data, error, loading, reload, setData } = useApi('/favoritos')
+  const offers = data?.ofertas ?? []
+  const producers = data?.produtores ?? []
+
+  // na tela de favoritos, desfavoritar tira o card da lista
+  const unfav = async (o) => {
+    setData((d) => ({ ...d, ofertas: d.ofertas.filter((x) => x.id !== o.id) }))
+    try {
+      await api(`/favoritos/${o.id}`, { method: 'DELETE' })
+    } finally {
+      reload()
+    }
+  }
 
   return (
     <div className="page">
@@ -20,49 +34,58 @@ export default function Favoritos() {
         <div>
           <h1 className="h1">Favoritos</h1>
           <p className="body-m t-secondary">
-            {favs.length} produtos e {favoriteProducers.length} produtores salvos. Você é avisado quando eles publicam
-            uma colheita nova.
+            {offers.length} {offers.length === 1 ? 'oferta salva' : 'ofertas salvas'} de {producers.length} {producers.length === 1 ? 'produtor' : 'produtores'}.
           </p>
         </div>
       </header>
 
       <Tabs label="Tipo de favorito" tabs={TABS} value={tab} onChange={setTab} />
 
-      {tab === 'Produtos' ? (
-        <div className="product-grid fav-grid">
-          {favs.map((p) => (
-            <ProductCard key={p.id} product={p} to={`/varejista/produto/${p.id}`} negotiateTo="/varejista/negociacoes" />
-          ))}
-        </div>
-      ) : (
-        <div className="producers">
-          {favoriteProducers.map((f) => (
-            <Card key={f.id} className="producer">
-              <Avatar initials={f.initials} size={52} />
-              <div className="list__text">
-                <span className="h3">{f.name}</span>
-                <span className="body-s t-tertiary producer__meta">
-                  <Star size={13} fill="#8d5b00" color="#8d5b00" aria-hidden /> {f.rating} ·
-                  <MapPin size={13} aria-hidden /> {f.km} km · {f.owner}
-                </span>
-                <span className="body-s t-secondary">{f.products}</span>
-              </div>
-              <div className="producer__actions">
-                <span className="body-s t-tertiary">{f.offers} ofertas ativas</span>
-                <Button size="s" variant="secondary" to={`/varejista/buscar?q=${encodeURIComponent(f.name)}`}>
-                  Ver ofertas
-                </Button>
-              </div>
-            </Card>
-          ))}
-          <p className="body-s t-tertiary">
-            Para salvar um produtor, toque no coração ao lado do nome dele em qualquer produto.{' '}
-            <Link to="/varejista/buscar" className="t-brand">
-              Buscar produtos
-            </Link>
-          </p>
-        </div>
-      )}
+      <LoadState
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        empty={offers.length === 0}
+        emptyText="Nenhum favorito ainda. Toque no coração de uma oferta para salvar aqui."
+      >
+        {tab === 'Produtos' ? (
+          <div className="product-grid fav-grid">
+            {offers.map((o) => (
+              <ProductCard key={o.id} product={o} to={`/varejista/produto/${o.id}`} onToggleFav={unfav} />
+            ))}
+          </div>
+        ) : (
+          <div className="producers">
+            {producers.map((f) => (
+              <Card key={f.id} className="producer">
+                <Avatar initials={f.iniciais} size={52} />
+                <div className="list__text">
+                  <span className="h3">{f.organizacao}</span>
+                  <span className="body-s t-tertiary producer__meta">
+                    <MapPin size={13} aria-hidden /> {f.cidade}/{f.uf}
+                    {f.distanciaKm != null && ` · ${Math.round(f.distanciaKm)} km`} · {f.nome}
+                  </span>
+                  <span className="body-s t-secondary">{f.produtos}</span>
+                </div>
+                <div className="producer__actions">
+                  <span className="body-s t-tertiary">
+                    {f.ofertasAtivas} {f.ofertasAtivas === 1 ? 'oferta ativa' : 'ofertas ativas'}
+                  </span>
+                  <Button size="s" variant="secondary" to={`/varejista/buscar?q=${encodeURIComponent(f.organizacao)}&raio=100`}>
+                    Ver ofertas
+                  </Button>
+                </div>
+              </Card>
+            ))}
+            <p className="body-s t-tertiary">
+              Os produtores aparecem aqui quando você favorita uma oferta deles.{' '}
+              <Link to="/varejista/buscar" className="t-brand">
+                Buscar produtos
+              </Link>
+            </p>
+          </div>
+        )}
+      </LoadState>
     </div>
   )
 }

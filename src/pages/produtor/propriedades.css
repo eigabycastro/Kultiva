@@ -1,0 +1,29 @@
+.property-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.property {
+  gap: 12px;
+}
+.property__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.property-form__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .property-form__grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .property-grid {
+    grid-template-columns: 1fr;
+  }
+}

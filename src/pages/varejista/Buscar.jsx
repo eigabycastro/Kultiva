@@ -1,94 +1,160 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, MapPin, Megaphone, MessageCircle, Search, SlidersHorizontal } from 'lucide-react'
-import { Badge, Button, Card, Checkbox, ChipGroup, SearchInput, Toggle } from '../../components/ui'
-import { ProductCard, Rating } from '../../components/cards'
+import { ChevronDown, MapPin, Megaphone, Search, SlidersHorizontal } from 'lucide-react'
+import { Badge, Button, Card, ChipGroup, SearchInput, Toggle, cx } from '../../components/ui'
+import { ProductCard } from '../../components/cards'
+import { LoadState, Notice, Pagination } from '../../components/Feedback'
 import ProduceArt from '../../components/ProduceArt'
-import { products } from '../../data/mock'
+import { api } from '../../api/client'
+import { useAuth } from '../../auth/AuthContext'
+import { useApi } from '../../hooks/useApi'
 import { useQueryState } from '../../hooks/useQueryState'
+import { formatBRL, formatQty, parseMoney } from '../../utils/format'
 import '../pages.css'
 import './buscar.css'
 import Title from '../../components/Title'
 
 const CATEGORIES = ['Todos', 'Hortaliças', 'Frutas', 'Legumes', 'Grãos', 'Orgânicos', 'Colhido hoje']
+const HARVEST = { qualquer: 'Qualquer data', hoje: 'Colhido hoje', semana: 'Até 7 dias' }
+const SORT = { distancia: 'Mais próximos', menor_preco: 'Menor preço', maior_preco: 'Maior preço', recentes: 'Mais recentes' }
+
+// adia a atualização enquanto a pessoa digita
+function useDebounced(value, ms = 400) {
+  const [v, setV] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setV(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return v
+}
+
+export function useFavoriteToggle(setData, onError) {
+  return async (o) => {
+    const next = !o.favorito
+    const flip = (list) => list.map((x) => (x.id === o.id ? { ...x, favorito: next } : x))
+    setData((d) => (Array.isArray(d) ? flip(d) : { ...d, data: flip(d.data) }))
+    try {
+      await api(`/favoritos/${o.id}`, { method: next ? 'POST' : 'DELETE' })
+    } catch (err) {
+      setData((d) => (Array.isArray(d) ? d.map((x) => (x.id === o.id ? { ...x, favorito: !next } : x)) : { ...d, data: d.data.map((x) => (x.id === o.id ? { ...x, favorito: !next } : x)) }))
+      onError?.(err.message)
+    }
+  }
+}
 
 export default function Buscar({ title = 'Buscar produtos' }) {
+  const { usuario } = useAuth()
   // filtros ficam na URL: recarregar ou compartilhar o link mantém a busca
   const [q, setQ] = useQueryState('q', '')
   const [cat, setCat] = useQueryState('cat', 'Todos')
-  const [radiusRaw, setRadius] = useQueryState('raio', '30')
-  const radius = Number(radiusRaw)
-  const [availList, setAvailList] = useQueryState('disp', ['pronto', 'hoje'], { list: true })
-  const avail = { pronto: availList.includes('pronto'), hoje: availList.includes('hoje'), semana: availList.includes('semana') }
-  const setAvail = (next) => setAvailList(Object.keys(next).filter((k) => next[k]))
-  const [seloRaw, setSelo] = useQueryState('selo', 'true')
-  const selo = seloRaw === 'true'
+  const [radiusRaw, setRadius] = useQueryState('raio', String(usuario.raioKm ?? 30))
+  const [harvest, setHarvest] = useQueryState('colheita', 'qualquer')
+  const [organicRaw, setOrganic] = useQueryState('organico', 'false')
   const [min, setMin] = useQueryState('min', '')
   const [max, setMax] = useQueryState('max', '')
+  const [sort, setSort] = useQueryState('ordem', 'distancia')
+  const [pageRaw, setPage] = useQueryState('pagina', '1')
+  const [error, setError] = useState('')
+  const radius = Number(radiusRaw)
+  const organic = organicRaw === 'true' || cat === 'Orgânicos'
+  const page = Number(pageRaw) || 1
+
+  const [text, setText] = useState(q)
+  const debouncedText = useDebounced(text)
+  const debouncedRadius = useDebounced(radius, 250)
+  useEffect(() => {
+    if (debouncedText !== q) {
+      setQ(debouncedText)
+      setPage('1')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedText])
+
+  const query = {
+    q: q || undefined,
+    categoria: ['Hortaliças', 'Frutas', 'Legumes', 'Grãos'].includes(cat) ? cat : undefined,
+    organico: organic || undefined,
+    colheita: cat === 'Colhido hoje' ? 'hoje' : harvest === 'qualquer' ? undefined : harvest,
+    raioKm: debouncedRadius,
+    precoMin: parseMoney(min) ?? undefined,
+    precoMax: parseMoney(max) ?? undefined,
+    ordenar: sort,
+    page,
+    pageSize: 9,
+  }
+  const { data, error: loadError, loading, reload, setData } = useApi('/ofertas', query)
+  const list = data?.data ?? []
+  const toggleFav = useFavoriteToggle(setData, setError)
+
+  const update = (setter) => (v) => {
+    setter(v)
+    setPage('1')
+  }
   const clear = () => {
     setCat('Todos')
-    setRadius('30')
-    setAvailList(['pronto', 'hoje'])
-    setSelo('true')
+    setRadius(String(usuario.raioKm ?? 30))
+    setHarvest('qualquer')
+    setOrganic('false')
     setMin('')
     setMax('')
+    setText('')
+    setPage('1')
   }
-  const negotiateTo = '/varejista/negociacoes'
+  const nextSort = () => {
+    const keys = Object.keys(SORT)
+    update(setSort)(keys[(keys.indexOf(sort) + 1) % keys.length])
+  }
+
+  const where = usuario.cidade ? `${usuario.cidade}, ${usuario.uf}` : 'você'
 
   return (
     <div className="page">
       {/* Mobile */}
       <div className="m-header only-mobile" style={{ paddingBottom: 4 }}>
         <Title mobile className="h2">{title}</Title>
-        <button type="button" className="location-pill">
+        <span className="location-pill">
           <MapPin size={16} aria-hidden />
           {radius} km
-          <ChevronDown size={16} aria-hidden />
-        </button>
+        </span>
       </div>
       <div className="only-mobile">
         <div className="m-search">
-          <SearchInput
-            icon={Search}
-            type="search"
-            name="q"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Tomate, alface, morango…"
-            aria-label="Buscar produtos"
-          />
-          <button type="button" className="m-search__filter" aria-label="Filtros">
-            <SlidersHorizontal size={20} aria-hidden />
-          </button>
+          <SearchInput icon={Search} type="search" name="q" value={text} onChange={(e) => setText(e.target.value)} placeholder="Tomate, alface, morango…" aria-label="Buscar produtos" />
         </div>
       </div>
 
       <header className="page-header only-desktop">
         <div>
           <Title className="h1">{title}</Title>
-          <p className="body-m t-secondary">Produtores com estoque disponível num raio de 30 km de Pouso Alegre, MG.</p>
+          <p className="body-m t-secondary">
+            Ofertas com estoque disponível num raio de {radius} km de {where}.
+          </p>
         </div>
-        <Button variant="secondary" icon={Megaphone} to="/varejista/procura-se">
+        <Button variant="secondary" icon={Megaphone} to="/varejista/procura-se/nova">
           Publicar Procura-se
         </Button>
       </header>
 
-      <form className="search-bar only-desktop" role="search" onSubmit={(e) => e.preventDefault()}>
-        <SearchInput
-          icon={Search}
-          type="search"
-          name="q"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ex.: tomate italiano, alface, morango…"
-          aria-label="Buscar produtos"
-          className="search-bar__input"
-        />
+      <form
+        className="search-bar only-desktop"
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault()
+          setQ(text)
+          setPage('1')
+        }}
+      >
+        <SearchInput icon={Search} type="search" name="q" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ex.: tomate italiano, alface, nome do sítio…" aria-label="Buscar produtos" className="search-bar__input" />
         <Button type="submit" icon={Search}>
           Buscar
         </Button>
       </form>
 
-      <ChipGroup label="Categoria" options={CATEGORIES} value={cat} onChange={setCat} className="search-chips" />
+      <ChipGroup label="Categoria" options={CATEGORIES} value={cat} onChange={update(setCat)} className="search-chips" />
+
+      <Notice tone="danger" onClose={() => setError('')}>
+        {error}
+      </Notice>
 
       <div className="search-layout">
         <Card as="aside" className="filters only-desktop">
@@ -105,60 +171,39 @@ export default function Buscar({ title = 'Buscar produtos' }) {
             <input
               type="range"
               min={5}
-              max={50}
+              max={100}
+              step={5}
               value={radius}
-              onChange={(e) => setRadius(e.target.value)}
+              onChange={(e) => update(setRadius)(e.target.value)}
               className="range"
-              style={{ '--p': `${((radius - 5) / 45) * 100}%` }}
+              style={{ '--p': `${((radius - 5) / 95) * 100}%` }}
               aria-label="Raio de distância"
             />
             <div className="row-between body-s t-tertiary">
               <span>5 km</span>
-              <span>50 km</span>
+              <span>100 km</span>
             </div>
           </div>
 
           <div className="filters__group">
-            <span className="label-m">Disponibilidade</span>
-            <Checkbox checked={avail.pronto} onChange={(v) => setAvail({ ...avail, pronto: v })}>
-              Pronto para colheita
-            </Checkbox>
-            <Checkbox checked={avail.hoje} onChange={(v) => setAvail({ ...avail, hoje: v })}>
-              Colhido hoje
-            </Checkbox>
-            <Checkbox checked={avail.semana} onChange={(v) => setAvail({ ...avail, semana: v })}>
-              Próximos 7 dias
-            </Checkbox>
+            <span className="label-m">Colheita</span>
+            <ChipGroup label="Colheita" options={Object.values(HARVEST)} value={HARVEST[harvest]} onChange={(l) => update(setHarvest)(Object.keys(HARVEST).find((k) => HARVEST[k] === l))} />
           </div>
 
           <div className="filters__group">
-            <span className="label-m">Faixa de preço (R$/kg)</span>
+            <span className="label-m">Faixa de preço (R$ por unidade)</span>
             <div className="filters__prices">
-              <SearchInput
-                placeholder="Mín. 2,00"
-                inputMode="decimal"
-                name="min"
-                value={min}
-                onChange={(e) => setMin(e.target.value)}
-                aria-label="Preço mínimo por kg"
-              />
-              <SearchInput
-                placeholder="Máx. 8,00"
-                inputMode="decimal"
-                name="max"
-                value={max}
-                onChange={(e) => setMax(e.target.value)}
-                aria-label="Preço máximo por kg"
-              />
+              <SearchInput placeholder="Mín. 2,00" inputMode="decimal" name="min" value={min} onChange={(e) => update(setMin)(e.target.value)} aria-label="Preço mínimo" />
+              <SearchInput placeholder="Máx. 8,00" inputMode="decimal" name="max" value={max} onChange={(e) => update(setMax)(e.target.value)} aria-label="Preço máximo" />
             </div>
           </div>
 
           <div className="filters__group filters__group--row">
             <div className="list__text">
-              <span className="label-m">Selo de qualidade</span>
-              <span className="body-s t-tertiary">Produtores certificados</span>
+              <span className="label-m">Só orgânicos</span>
+              <span className="body-s t-tertiary">Ofertas marcadas como orgânicas</span>
             </div>
-            <Toggle checked={selo} onChange={(v) => setSelo(String(v))} label="Selo de qualidade" />
+            <Toggle checked={organic} onChange={(v) => update(setOrganic)(String(v))} label="Só orgânicos" />
           </div>
 
           <Button variant="secondary" block onClick={clear}>
@@ -168,59 +213,66 @@ export default function Buscar({ title = 'Buscar produtos' }) {
 
         <div className="results">
           <div className="row-between results__head">
-            <p className="body-m">
-              <strong className="only-desktop">48 produtos</strong>
-              <span className="t-secondary only-desktop"> encontrados perto de você</span>
-              <span className="t-secondary only-mobile body-s">48 produtos perto de você</span>
+            <p className="body-m" aria-live="polite">
+              <strong>{data ? `${data.total} ${data.total === 1 ? 'oferta' : 'ofertas'}` : 'Buscando…'}</strong>
+              <span className="t-secondary"> perto de você</span>
             </p>
-            <button type="button" className="sort-btn only-desktop">
-              <span className="t-tertiary">Ordenar:</span> Mais próximos
+            <label className="sort-btn">
+              <span className="t-tertiary">Ordenar:</span>
+              <select value={sort} onChange={(e) => update(setSort)(e.target.value)} aria-label="Ordenar por" className="sort-select">
+                {Object.entries(SORT).map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </select>
               <ChevronDown size={16} aria-hidden />
-            </button>
-            <button type="button" className="label-s t-brand only-mobile sort-link">
-              Mais próximos
+            </label>
+            <button type="button" className="label-s t-brand only-mobile sort-link" onClick={nextSort}>
+              {SORT[sort]}
             </button>
           </div>
 
-          <div className="product-grid only-desktop">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} to={`/varejista/produto/${p.id}`} negotiateTo={negotiateTo} />
-            ))}
-          </div>
+          <LoadState
+            loading={loading}
+            error={loadError}
+            onRetry={reload}
+            empty={list.length === 0}
+            emptyText="Nenhuma oferta com esses filtros. Aumente o raio ou publique um Procura-se para os produtores te encontrarem."
+          >
+            <div className="product-grid only-desktop">
+              {list.map((o) => (
+                <ProductCard key={o.id} product={o} to={`/varejista/produto/${o.id}`} onToggleFav={toggleFav} />
+              ))}
+            </div>
 
-          <div className="stack-8 only-mobile">
-            {products
-              .filter((p) => p.kind !== 'couve' && p.kind !== 'cenoura')
-              .map((p) => (
-                <Card key={p.id} className="product-row">
-                  <Link to={`/varejista/produto/${p.id}`} className="product-row__img">
-                    <ProduceArt kind={p.kind} label={p.name} style={{ width: '100%', height: '100%' }} />
+            <div className="stack-8 only-mobile">
+              {list.map((o) => (
+                <Card key={o.id} className="product-row">
+                  <Link to={`/varejista/produto/${o.id}`} className="product-row__img">
+                    <ProduceArt kind={o.kind} label={o.produto} style={{ width: '100%', height: '100%' }} />
                   </Link>
                   <div className="product-row__body">
-                    <div className="row-between">
-                      <Link to={`/varejista/produto/${p.id}`} className="label-m">
-                        {p.name}
-                      </Link>
-                      <Rating value={p.rating} />
-                    </div>
+                    <Link to={`/varejista/produto/${o.id}`} className="label-m">
+                      {o.produto}
+                    </Link>
                     <span className="body-s t-tertiary">
-                      {p.farmShort} · {p.km} km
+                      {o.propriedade.nome} · {Math.round(o.distanciaKm ?? 0)} km
                     </span>
-                    <Badge tone={p.tag === 'Colhido hoje' ? 'brand' : 'success'}>
-                      {p.tag === 'Colhido hoje' ? `Colhido hoje · ${p.stockShort}` : `Selo · ${p.stockShort}`}
+                    <Badge tone={o.tagTone}>
+                      {o.tag} · {formatQty(o.quantidadeDisponivel, o.unidade)}
                     </Badge>
-                    <div className="row-between">
-                      <span>
-                        <strong className="price">{p.price}</strong>
-                        <span className="body-s t-tertiary">/{p.unitShort}</span>
-                      </span>
-                      <Link to={negotiateTo} className="product-row__chat" aria-label={`Negociar ${p.name}`}>
-                        <MessageCircle size={18} aria-hidden />
-                      </Link>
-                    </div>
+                    <span>
+                      <strong className="price">{formatBRL(o.preco)}</strong>
+                      <span className="body-s t-tertiary">/{o.unidade}</span>
+                    </span>
                   </div>
                 </Card>
               ))}
+            </div>
+          </LoadState>
+          <div className={cx(loading && 'is-refreshing')}>
+            <Pagination page={page} totalPages={data?.totalPages} total={data?.total} onChange={(p) => setPage(String(p))} label="ofertas" />
           </div>
         </div>
       </div>

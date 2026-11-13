@@ -1,25 +1,30 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell,
   Calendar,
-  ChevronDown,
   Crown,
   Heart,
   House,
   LayoutGrid,
   LogOut,
   MapPin,
+  MapPinned,
   Megaphone,
   MessageCircle,
   Package,
   Search,
+  ShieldCheck,
   Sparkle,
   Truck,
   User,
+  Users,
 } from 'lucide-react'
 import Logo from '../Logo'
 import { Avatar, Button, cx } from '../ui'
-import { location, users } from '../../data/mock'
+import { useAuth } from '../../auth/AuthContext'
+import { api } from '../../api/client'
+import { PERFIL_LABEL } from '../../utils/status'
 import './layout.css'
 
 export const NAV = {
@@ -27,61 +32,93 @@ export const NAV = {
     { to: '/produtor', label: 'Visão geral', icon: LayoutGrid, end: true },
     { to: '/produtor/produtos', label: 'Meus produtos', icon: Package },
     { to: '/produtor/pedidos', label: 'Pedidos', icon: Truck },
-    { to: '/produtor/negociacoes', label: 'Negociações', icon: MessageCircle },
     { to: '/produtor/procura-se', label: 'Procura-se', icon: Megaphone },
+    { to: '/produtor/propriedades', label: 'Propriedades', icon: MapPinned },
+    { to: '/produtor/negociacoes', label: 'Negociações', icon: MessageCircle },
     { to: '/produtor/previsao', label: 'Previsão IA', icon: Sparkle },
     { to: '/produtor/calendario', label: 'Calendário de safra', icon: Calendar },
   ],
   varejista: [
     { to: '/varejista', label: 'Início', icon: House, end: true },
     { to: '/varejista/buscar', label: 'Buscar produtos', icon: Search },
-    { to: '/varejista/negociacoes', label: 'Negociações', icon: MessageCircle },
     { to: '/varejista/pedidos', label: 'Pedidos', icon: Truck },
     { to: '/varejista/procura-se', label: 'Procura-se', icon: Megaphone },
     { to: '/varejista/favoritos', label: 'Favoritos', icon: Heart },
+    { to: '/varejista/negociacoes', label: 'Negociações', icon: MessageCircle },
   ],
+  admin: [{ to: '/admin/usuarios', label: 'Usuários', icon: Users }],
 }
 
 const TABS = {
   produtor: [
     { to: '/produtor', label: 'Início', icon: House, end: true },
     { to: '/produtor/produtos', label: 'Produtos', icon: Package },
+    { to: '/produtor/pedidos', label: 'Pedidos', icon: Truck },
     { to: '/produtor/procura-se', label: 'Procura-se', icon: Megaphone },
-    { to: '/produtor/negociacoes', label: 'Chat', icon: MessageCircle },
     { to: '/produtor/perfil', label: 'Perfil', icon: User },
   ],
   varejista: [
     { to: '/varejista', label: 'Início', icon: House, end: true },
     { to: '/varejista/buscar', label: 'Buscar', icon: Search },
     { to: '/varejista/procura-se', label: 'Procura-se', icon: Megaphone },
-    { to: '/varejista/negociacoes', label: 'Chat', icon: MessageCircle },
     { to: '/varejista/pedidos', label: 'Pedidos', icon: Truck },
+    { to: '/varejista/perfil', label: 'Perfil', icon: User },
+  ],
+  admin: [
+    { to: '/admin/usuarios', label: 'Usuários', icon: Users },
+    { to: '/admin/perfil', label: 'Perfil', icon: User },
   ],
 }
 
-const FULLSCREEN = [/\/negociacoes/, /^\/produtor\/produtos\/nova/, /^\/varejista\/procura-se/, /\/notificacoes/, /^\/varejista\/produto\//]
+const FULLSCREEN = [
+  /\/negociacoes/,
+  /^\/produtor\/produtos\/(nova|\d+)/,
+  /^\/varejista\/procura-se\/(nova|\d+)/,
+  /\/notificacoes/,
+  /^\/varejista\/produto\//,
+]
 
 const PREMIUM_COPY = {
   produtor: 'Mais alcance e destaque nas buscas.',
   varejista: 'Ranking dos melhores produtores da região.',
 }
 
+const SEARCH = {
+  produtor: { to: '/produtor/pedidos', placeholder: 'Buscar pedidos por produto, comprador ou código…' },
+  varejista: { to: '/varejista/buscar', placeholder: 'Buscar produtos ou produtores…' },
+  admin: { to: '/admin/usuarios', placeholder: 'Buscar usuários por nome, e-mail ou cidade…' },
+}
+
+// Área do usuário logado: 'produtor' | 'varejista' | 'admin'
 export function useRole() {
+  return useAuth().area ?? 'produtor'
+}
+
+function useUnread() {
   const { pathname } = useLocation()
-  return pathname.startsWith('/varejista') ? 'varejista' : 'produtor'
+  const [total, setTotal] = useState(0)
+  useEffect(() => {
+    api('/notificacoes/nao-lidas')
+      .then((r) => setTotal(r.total))
+      .catch(() => {})
+  }, [pathname])
+  return total
 }
 
 function Sidebar({ role }) {
-  const user = users[role]
+  const { usuario, sair } = useAuth()
   const navigate = useNavigate()
-  // TODO(back-end): encerrar a sessão na API antes de voltar ao login
+  const logout = async () => {
+    await sair()
+    navigate('/login', { replace: true })
+  }
   return (
     <aside className="sidebar">
       <div className="sidebar__logo">
         <Logo size="s" theme="dark" />
       </div>
       <nav className="sidebar__nav" aria-label="Menu principal">
-        <span className="sidebar__menu-label">{role === 'produtor' ? 'Produção' : 'Compras'}</span>
+        <span className="sidebar__menu-label">{{ produtor: 'Produção', varejista: 'Compras', admin: 'Administração' }[role]}</span>
         {NAV[role].map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -96,25 +133,27 @@ function Sidebar({ role }) {
         ))}
       </nav>
       <div className="sidebar__bottom">
-        <div className="premium-card">
-          <div className="premium-card__title">
-            <Crown size={16} strokeWidth={2} aria-hidden />
-            Kultiva Premium
+        {role !== 'admin' && (
+          <div className="premium-card">
+            <div className="premium-card__title">
+              <Crown size={16} strokeWidth={2} aria-hidden />
+              Kultiva Premium
+            </div>
+            <p className="body-s premium-card__text">{PREMIUM_COPY[role]}</p>
+            <Button variant="accent" size="s" block to={`/${role}/planos`}>
+              Conhecer planos
+            </Button>
           </div>
-          <p className="body-s premium-card__text">{PREMIUM_COPY[role]}</p>
-          <Button variant="accent" size="s" block to={`/${role}/planos`}>
-            Conhecer planos
-          </Button>
-        </div>
+        )}
         <div className="sidebar__user">
           <Link to={`/${role}/perfil`} className="sidebar__profile" title="Perfil e configurações">
-            <Avatar initials={user.initials} />
+            <Avatar initials={usuario.iniciais} />
             <span className="sidebar__user-info">
-              <span className="label-m">{user.name}</span>
-              <span className="body-s t-tertiary">{user.role}</span>
+              <span className="label-m">{usuario.organizacao || usuario.nome}</span>
+              <span className="body-s t-tertiary">{PERFIL_LABEL[usuario.perfil]}</span>
             </span>
           </Link>
-          <button type="button" className="icon-btn" aria-label="Sair" onClick={() => navigate('/login')}>
+          <button type="button" className="icon-btn" aria-label="Sair" title="Sair" onClick={logout}>
             <LogOut size={20} strokeWidth={2} aria-hidden />
           </button>
         </div>
@@ -123,37 +162,52 @@ function Sidebar({ role }) {
   )
 }
 
-function Topbar({ role }) {
-  const user = users[role]
+function Topbar({ role, unread }) {
+  const { usuario } = useAuth()
+  const navigate = useNavigate()
+  const search = SEARCH[role]
+  const submit = (e) => {
+    e.preventDefault()
+    const q = new FormData(e.currentTarget).get('q').trim()
+    navigate(`${search.to}${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+  }
   return (
     <header className="topbar">
-      <label className="topbar__search">
+      <form className="topbar__search" role="search" onSubmit={submit}>
         <Search size={18} strokeWidth={2} className="field__icon" aria-hidden />
         <input
           type="search"
           name="q"
           className="field__input"
-          placeholder="Buscar produtos, produtores ou pedidos…"
-          aria-label="Buscar produtos, produtores ou pedidos"
+          placeholder={search.placeholder}
+          aria-label={search.placeholder}
           autoComplete="off"
         />
-      </label>
+      </form>
       <div className="topbar__right">
-        <button type="button" className="location-pill">
-          <MapPin size={16} strokeWidth={2} aria-hidden />
-          {location.label} · {location.radiusKm} km
-          <ChevronDown size={16} strokeWidth={2} aria-hidden />
-        </button>
-        <Link
-          to={role === 'produtor' ? '/produtor/notificacoes' : '/varejista/pedidos'}
-          className="icon-btn topbar__bell"
-          aria-label="Notificações (novas)"
-        >
-          <Bell size={20} strokeWidth={2} aria-hidden />
-          <span className="topbar__dot" />
-        </Link>
+        {role === 'admin' ? (
+          <span className="location-pill">
+            <ShieldCheck size={16} strokeWidth={2} aria-hidden />
+            Administrador
+          </span>
+        ) : (
+          <Link to={`/${role}/perfil`} className="location-pill" title="Alterar localização e raio no perfil">
+            <MapPin size={16} strokeWidth={2} aria-hidden />
+            {usuario.cidade ? `${usuario.cidade}, ${usuario.uf}` : 'Definir localização'} · {usuario.raioKm} km
+          </Link>
+        )}
+        {role !== 'admin' && (
+          <Link
+            to={`/${role}/notificacoes`}
+            className="icon-btn topbar__bell"
+            aria-label={unread ? `Notificações (${unread} novas)` : 'Notificações'}
+          >
+            <Bell size={20} strokeWidth={2} aria-hidden />
+            {unread > 0 && <span className="topbar__dot" />}
+          </Link>
+        )}
         <Link to={`/${role}/perfil`} aria-label="Perfil e configurações" title="Perfil e configurações">
-          <Avatar initials={user.initials} />
+          <Avatar initials={usuario.iniciais} />
         </Link>
       </div>
     </header>
@@ -173,9 +227,22 @@ export function BottomNav({ role }) {
   )
 }
 
+/* Sino com indicador de não lidas para os cabeçalhos mobile */
+export function MobileBell() {
+  const role = useRole()
+  const unread = useUnread()
+  return (
+    <Link to={`/${role}/notificacoes`} className="icon-btn topbar__bell" aria-label={unread ? `Notificações (${unread} novas)` : 'Notificações'}>
+      <Bell size={20} aria-hidden />
+      {unread > 0 && <span className="topbar__dot" />}
+    </Link>
+  )
+}
+
 /* Layout autenticado: sidebar + topbar (desktop) · bottom nav (mobile) */
 export default function AppLayout() {
   const role = useRole()
+  const unread = useUnread()
   const { pathname } = useLocation()
   // no mobile, telas de tarefa (chat, formulários, detalhe) escondem a barra inferior
   const fullScreen = FULLSCREEN.some((re) => re.test(pathname))
@@ -186,7 +253,7 @@ export default function AppLayout() {
       </a>
       <Sidebar role={role} />
       <div className="app__main">
-        <Topbar role={role} />
+        <Topbar role={role} unread={unread} />
         <main id="conteudo" className="app__content" tabIndex={-1}>
           <Outlet />
           <p className="app__credits body-s">

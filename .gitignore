@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .taste-skill
 .claude/
+
+# Segredos e banco local
+.env
+server/.env
+server/.pgdata

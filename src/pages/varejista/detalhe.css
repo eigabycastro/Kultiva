@@ -260,3 +260,28 @@
     min-width: 134px;
   }
 }
+
+.stepper__input {
+  width: 64px;
+  border: 0;
+  background: transparent;
+  text-align: center;
+  font: inherit;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.stepper__input:focus-visible {
+  outline: 2px solid var(--bg-brand);
+  border-radius: 6px;
+}
+.stepper button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.detail__order-extra {
+  margin-top: 4px;
+}
+.extra-item {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}

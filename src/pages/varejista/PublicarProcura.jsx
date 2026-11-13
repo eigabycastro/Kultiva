@@ -1,67 +1,130 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Calendar, ChevronDown, ChevronLeft, Megaphone, Package, Search, Sparkles, TrendingUp } from 'lucide-react'
 import { Avatar, Button, Card, ChipGroup, Field, IconTile } from '../../components/ui'
 import { DemandCard } from '../../components/cards'
+import { LoadState, Notice } from '../../components/Feedback'
+import { api } from '../../api/client'
+import { useAuth } from '../../auth/AuthContext'
+import { useApi } from '../../hooks/useApi'
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges'
+import { moneyInput, parseMoney, toInputDate, todayInput } from '../../utils/format'
+import { UNITS } from '../../utils/status'
 import '../pages.css'
 import '../produtor/oferta.css'
 import './publicar.css'
 import Title from '../../components/Title'
 
-const MATCHES = ['JS', 'FS', 'CR', 'HS', 'DI']
-const REQUIRED = {
-  what: 'Informe o produto, ex.: Tomate italiano.',
-  qty: 'Informe a quantidade, ex.: 300.',
-  deadline: 'Informe até quando precisa, ex.: 12/10/2026.',
-}
+const FREQ = ['Compra única', 'Semanal', 'Quinzenal', 'Mensal']
+const RADIUS = ['10 km', '30 km', '50 km', '100 km']
+const EMPTY = { produtoId: '', quantidade: '', unidade: 'kg', precoMaximo: '', prazo: '', frequencia: 'Compra única', raio: '30 km', observacoes: '' }
+
+const fromDemand = (d) => ({
+  produtoId: String(d.produtoId),
+  quantidade: String(d.quantidade),
+  unidade: d.unidade,
+  precoMaximo: moneyInput(d.precoMaximo),
+  prazo: toInputDate(d.prazo),
+  frequencia: d.frequencia,
+  raio: `${d.raioKm} km`,
+  observacoes: d.observacoes ?? '',
+})
 
 export default function PublicarProcura() {
+  const { id } = useParams()
+  const editing = Boolean(id)
   const navigate = useNavigate()
-  const [freq, setFreq] = useState('Compra única')
-  const [radius, setRadius] = useState('30 km')
-  const [reqs, setReqs] = useState(['Selo de qualidade', 'Com nota fiscal', 'Entrega inclusa'])
-  const [what, setWhat] = useState('')
-  const [qty, setQty] = useState('')
-  const [unit, setUnit] = useState('kg')
-  const [price, setPrice] = useState('')
-  const [deadline, setDeadline] = useState('')
-  const [notes, setNotes] = useState('')
+  const { usuario } = useAuth()
+  const produtos = useApi('/produtos')
+  const existing = useApi(editing ? `/demandas/${id}` : null, undefined, { enabled: editing })
+  const [initial, setInitial] = useState(EMPTY)
+  const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState({})
-  const confirmLeave = useUnsavedChanges(Boolean(what || qty || price || deadline || notes))
-  const values = { what, qty, deadline }
-  const change = (setter, key) => (e) => {
-    setter(e.target.value)
-    if (key && errors[key]) setErrors({ ...errors, [key]: undefined })
+  const [error, setError] = useState('')
+  const [sending, setSending] = useState(false)
+  const confirmLeave = useUnsavedChanges(JSON.stringify(form) !== JSON.stringify(initial) && !sending)
+
+  useEffect(() => {
+    if (existing.data) {
+      const f = fromDemand(existing.data)
+      setInitial(f)
+      setForm(f)
+    }
+  }, [existing.data])
+
+  const produto = produtos.data?.find((p) => String(p.id) === form.produtoId)
+  const radiusKm = Number.parseInt(form.raio, 10)
+  const preview = useApi(
+    produto ? '/demandas/previa' : null,
+    produto ? { produtoId: produto.id, raioKm: radiusKm, precoMaximo: parseMoney(form.precoMaximo) ?? undefined } : undefined,
+    { enabled: Boolean(produto) },
+  )
+
+  const set = (k) => (e) => {
+    const value = e?.target ? e.target.value : e
+    const next = { ...form, [k]: value }
+    if (k === 'produtoId') {
+      const p = produtos.data?.find((x) => String(x.id) === value)
+      if (p) next.unidade = p.unidadePadrao
+    }
+    setForm(next)
+    if (errors[k]) setErrors({ ...errors, [k]: undefined })
   }
 
-  const publish = (e) => {
+  const publish = async (e) => {
     e.preventDefault()
-    const found = Object.fromEntries(Object.entries(REQUIRED).filter(([k]) => !values[k].trim()))
+    const found = {}
+    if (!form.produtoId) found.produtoId = 'Escolha o produto, ex.: Tomate italiano.'
+    if (!(Number(form.quantidade) > 0)) found.quantidade = 'Informe a quantidade, ex.: 300.'
+    if (!form.prazo) found.prazo = 'Informe até quando precisa.'
+    else if (form.prazo < todayInput()) found.prazo = 'O prazo não pode estar no passado.'
+    if (form.precoMaximo && !(parseMoney(form.precoMaximo) > 0)) found.precoMaximo = 'Preço inválido, ex.: 5,80.'
     setErrors(found)
     const first = Object.keys(found)[0]
     if (first) {
-      // foca o primeiro campo com erro que está visível neste tamanho de tela
-      const el = [...e.currentTarget.querySelectorAll(`[name="${first}"]`)].find((x) => x.offsetParent)
-      el?.focus()
+      document.querySelector(`[name="${first}"]`)?.focus()
       return
     }
-    // TODO(back-end): POST /procura-se
-    navigate('/varejista/buscar')
+    setSending(true)
+    setError('')
+    const body = {
+      produtoId: Number(form.produtoId),
+      quantidade: Number(form.quantidade),
+      unidade: form.unidade,
+      precoMaximo: parseMoney(form.precoMaximo),
+      prazo: form.prazo,
+      frequencia: form.frequencia,
+      raioKm: radiusKm,
+      observacoes: form.observacoes || null,
+    }
+    try {
+      const saved = await api(editing ? `/demandas/${id}` : '/demandas', { method: editing ? 'PUT' : 'POST', body })
+      setInitial(form)
+      const n = saved.produtoresAvisados
+      const flash = editing
+        ? `Demanda de ${saved.produto} atualizada.`
+        : `Demanda de ${saved.produto} publicada. ${n ? `${n} ${n === 1 ? 'produtor compatível foi avisado' : 'produtores compatíveis foram avisados'}.` : 'Avisaremos os produtores assim que surgir oferta compatível.'}`
+      navigate('/varejista/procura-se', { state: { flash } })
+    } catch (err) {
+      setErrors(err.porCampo)
+      setError(err.message)
+      setSending(false)
+    }
   }
-  const leave = () => confirmLeave() && navigate(-1)
+  const leave = () => confirmLeave() && navigate('/varejista/procura-se')
 
-  const preview = {
-    buyer: 'Mercado Mais',
-    initials: 'SM',
-    type: 'Varejista',
-    km: 0,
-    status: 'Urgente',
-    tone: 'warning',
-    kind: 'tomate',
-    title: `${qty || '300'} ${unit} de ${what || 'Tomate italiano'}`,
-    deadline: 'Entrega até 12/10',
-    maxPrice: `Até ${price || 'R$ 5,80'}/${unit}`,
+  const card = {
+    varejista: { organizacao: usuario.organizacao, iniciais: usuario.iniciais, tipoEstabelecimento: `${usuario.tipoEstabelecimento ?? 'Varejista'} · ${usuario.cidade ?? ''}` },
+    status: 'ABERTA',
+    urgente: form.prazo && new Date(form.prazo) - Date.now() < 3 * 864e5,
+    kind: produto?.foto ?? 'tomate',
+    produto: produto?.nome ?? 'seu produto',
+    quantidade: Number(form.quantidade) || 0,
+    unidade: form.unidade,
+    prazo: form.prazo || null,
+    frequencia: form.frequencia,
+    precoMaximo: parseMoney(form.precoMaximo),
+    observacoes: form.observacoes,
   }
 
   return (
@@ -70,164 +133,122 @@ export default function PublicarProcura() {
         <button type="button" className="icon-btn" aria-label="Voltar" onClick={leave}>
           <ChevronLeft size={22} aria-hidden />
         </button>
-        <Title mobile as="span" className="m-topbar__title">Publicar Procura-se</Title>
+        <Title mobile as="span" className="m-topbar__title">
+          {editing ? 'Editar demanda' : 'Publicar Procura-se'}
+        </Title>
       </div>
-      <p className="body-s t-secondary only-mobile">
-        Os produtores do seu raio são avisados na hora e podem enviar ofertas pelo chat.
-      </p>
+      <p className="body-s t-secondary only-mobile">Os produtores do seu raio são avisados na hora.</p>
 
       <header className="page-header only-desktop">
         <div>
-          <Title className="h1">Publicar Procura-se</Title>
+          <Title className="h1">{editing ? 'Editar demanda' : 'Publicar Procura-se'}</Title>
           <p className="body-m t-secondary">Diga o que você precisa e deixe os produtores da região virem até você.</p>
         </div>
         <div className="page-header__actions">
           <Button variant="ghost" onClick={leave}>
-            Descartar demanda
+            {editing ? 'Cancelar' : 'Descartar demanda'}
           </Button>
-          <Button type="submit" icon={Megaphone}>
-            Publicar demanda
+          <Button type="submit" icon={Megaphone} disabled={sending}>
+            {sending ? 'Salvando…' : editing ? 'Salvar alterações' : 'Publicar demanda'}
           </Button>
         </div>
       </header>
 
-      <div className="offer-layout publish-layout">
-        <Card className="panel offer-form">
-          <div className="grid-3 grid-3--m">
-            <Field
-              label="O que você procura? *"
-              icon={Search}
-              name="what"
-              placeholder="Tomate italiano"
-              value={what}
-              onChange={change(setWhat, 'what')}
-              error={errors.what}
-              required
-              className="span-m"
-            />
-            <Field
-              label="Quantidade *"
-              icon={Package}
-              name="qty"
-              placeholder="300"
-              inputMode="numeric"
-              value={qty}
-              onChange={change(setQty, 'qty')}
-              error={errors.qty}
-              required
-            />
-            <Field label="Unidade" icon={ChevronDown} className="only-desktop">
-              <select className="field__input" name="unit" value={unit} onChange={(e) => setUnit(e.target.value)}>
-                <option>kg</option>
-                <option>maço</option>
-                <option>caixa</option>
-                <option>unidade</option>
-              </select>
-            </Field>
-            <Field
-              label={<span className="only-mobile">Preço máx.</span>}
-              icon={TrendingUp}
-              name="price"
-              placeholder="R$ 5,80"
-              inputMode="decimal"
-              className="only-mobile"
-              value={price}
-              onChange={change(setPrice)}
-            />
-          </div>
+      <Notice tone="danger">{error}</Notice>
 
-          <div className="grid-2">
-            <Field
-              label="Preço máximo por unidade"
-              icon={TrendingUp}
-              name="price"
-              placeholder="R$ 5,80"
-              inputMode="decimal"
-              className="only-desktop"
-              value={price}
-              onChange={change(setPrice)}
-            />
-            <Field
-              label="Entregar até *"
-              icon={Calendar}
-              name="deadline"
-              placeholder="12/10/2026"
-              value={deadline}
-              onChange={change(setDeadline, 'deadline')}
-              error={errors.deadline}
-              required
-            />
-          </div>
-
-          <div className="field-block">
-            <span className="field__label">Frequência</span>
-            <span className="body-s t-tertiary only-desktop">Demandas recorrentes atraem produtores para contratos fixos</span>
-            <ChipGroup label="Frequência" options={['Compra única', 'Semanal', 'Quinzenal', 'Mensal']} value={freq} onChange={setFreq} />
-          </div>
-
-          <div className="field-block">
-            <span className="field__label">
-              <span className="only-desktop">Buscar produtores em até</span>
-              <span className="only-mobile">Raio</span>
-            </span>
-            <ChipGroup label="Raio de busca" options={['10 km', '30 km', '50 km']} value={radius} onChange={setRadius} />
-          </div>
-
-          <div className="field-block only-desktop">
-            <span className="field__label">Requisitos</span>
-            <ChipGroup
-              label="Requisitos"
-              multiple
-              options={['Orgânico', 'Selo de qualidade', 'Com nota fiscal', 'Entrega inclusa']}
-              value={reqs}
-              onChange={setReqs}
-            />
-          </div>
-
-          <Field
-            label={
-              <>
-                <span className="only-desktop">Observações para o produtor</span>
-                <span className="only-mobile">Observações</span>
-              </>
-            }
-            as="textarea"
-            name="notes"
-            value={notes}
-            onChange={change(setNotes)}
-            placeholder="Ex.: tomates firmes, calibre médio, entrega na doca 2 entre 6h e 9h…"
-          />
-
-          <div className="match-hint only-mobile">
-            <Sparkles size={16} aria-hidden />
-            <span className="body-s">7 produtores compatíveis no seu raio já têm tomate disponível.</span>
-          </div>
-        </Card>
-
-        <aside className="offer-side only-desktop">
-          <span className="label-m t-secondary">Prévia da sua demanda</span>
-          <DemandCard demand={{ ...preview, type: 'Varejista · Pouso Alegre', km: undefined }} />
-          <Card className="panel">
-            <div className="matches__head">
-              <IconTile icon={Sparkles} tone="solid" size={36} iconSize={18} />
-              <span className="h4">7 produtores compatíveis</span>
+      <LoadState loading={produtos.loading || (editing && existing.loading)} error={produtos.error || existing.error} empty={produtos.loading || (editing && existing.loading)} skeleton={4}>
+        <div className="offer-layout publish-layout">
+          <Card className="panel offer-form">
+            <div className="grid-3 grid-3--m">
+              <Field label="O que você procura? *" icon={Search} error={errors.produtoId} className="span-m">
+                <select className="field__input" name="produtoId" value={form.produtoId} onChange={set('produtoId')}>
+                  <option value="">Escolha…</option>
+                  {produtos.data?.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Quantidade *" icon={Package} name="quantidade" placeholder="300" inputMode="numeric" value={form.quantidade} onChange={set('quantidade')} error={errors.quantidade} />
+              <Field label="Unidade" icon={ChevronDown}>
+                <select className="field__input" name="unidade" value={form.unidade} onChange={set('unidade')}>
+                  {UNITS.map((u) => (
+                    <option key={u}>{u}</option>
+                  ))}
+                </select>
+              </Field>
             </div>
-            <div className="matches__avatars">
-              {MATCHES.map((m) => (
-                <Avatar key={m} initials={m} size={36} />
-              ))}
+
+            <div className="grid-2">
+              <Field label={`Preço máximo por ${form.unidade}`} icon={TrendingUp} name="precoMaximo" placeholder="5,80" inputMode="decimal" value={form.precoMaximo} onChange={set('precoMaximo')} error={errors.precoMaximo} hint="Opcional: só avisamos quem cobra até esse valor" />
+              <Field label="Entregar até *" icon={Calendar} type="date" min={todayInput()} name="prazo" value={form.prazo} onChange={set('prazo')} error={errors.prazo} />
             </div>
-            <p className="body-s t-secondary">
-              Eles têm tomate disponível no seu raio e serão avisados assim que você publicar. Tempo médio até a 1ª
-              oferta: 40 min.
-            </p>
+
+            <div className="field-block">
+              <span className="field__label">Frequência</span>
+              <span className="body-s t-tertiary only-desktop">Demandas recorrentes atraem produtores para contratos fixos</span>
+              <ChipGroup label="Frequência" options={FREQ} value={form.frequencia} onChange={set('frequencia')} />
+            </div>
+
+            <div className="field-block">
+              <span className="field__label">Buscar produtores em até</span>
+              <ChipGroup label="Raio de busca" options={RADIUS} value={form.raio} onChange={set('raio')} />
+            </div>
+
+            <Field
+              label="Observações para o produtor"
+              as="textarea"
+              name="observacoes"
+              value={form.observacoes}
+              onChange={set('observacoes')}
+              placeholder="Ex.: tomates firmes, calibre médio, entrega na doca 2 entre 6h e 9h…"
+            />
+
+            {preview.data && (
+              <div className="match-hint only-mobile">
+                <Sparkles size={16} aria-hidden />
+                <span className="body-s">
+                  {preview.data.produtores} {preview.data.produtores === 1 ? 'produtor compatível' : 'produtores compatíveis'} no seu raio.
+                </span>
+              </div>
+            )}
           </Card>
-        </aside>
-      </div>
+
+          <aside className="offer-side only-desktop">
+            <span className="label-m t-secondary">Prévia da sua demanda</span>
+            <DemandCard demand={card} actions={<span />} />
+            <Card className="panel">
+              <div className="matches__head">
+                <IconTile icon={Sparkles} tone="solid" size={36} iconSize={18} />
+                <span className="h4">
+                  {produto
+                    ? preview.data
+                      ? `${preview.data.produtores} ${preview.data.produtores === 1 ? 'produtor compatível' : 'produtores compatíveis'}`
+                      : 'Calculando…'
+                    : 'Escolha um produto'}
+                </span>
+              </div>
+              {preview.data?.iniciais.length > 0 && (
+                <div className="matches__avatars">
+                  {preview.data.iniciais.map((m, i) => (
+                    <Avatar key={i} initials={m} size={36} />
+                  ))}
+                </div>
+              )}
+              <p className="body-s t-secondary">
+                {produto
+                  ? `Produtores com ${produto.nome.toLowerCase()} disponível em até ${radiusKm} km${form.precoMaximo ? ' e dentro do seu preço' : ''}. ${editing ? '' : 'Eles serão avisados assim que você publicar.'}`
+                  : 'Mostramos aqui quantos produtores da região podem atender.'}
+              </p>
+            </Card>
+          </aside>
+        </div>
+      </LoadState>
 
       <div className="m-footer only-mobile">
-        <Button type="submit" block>
-          Publicar demanda
+        <Button type="submit" block disabled={sending}>
+          {editing ? 'Salvar alterações' : 'Publicar demanda'}
         </Button>
       </div>
     </form>
