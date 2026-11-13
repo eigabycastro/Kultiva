@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Calendar, ChevronDown, ChevronLeft, Megaphone, Package, Search, Sparkles, TrendingUp } from 'lucide-react'
+import { Calendar, ChevronDown, ChevronLeft, Megaphone, Package, Sparkles, TrendingUp } from 'lucide-react'
 import { Avatar, Button, Card, ChipGroup, Field, IconTile } from '../../components/ui'
 import { DemandCard } from '../../components/cards'
 import { LoadState, Notice } from '../../components/Feedback'
+import ProdutoSelect, { NOVO, garantirProduto } from '../../components/ProdutoSelect'
 import { api } from '../../api/client'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../hooks/useApi'
@@ -39,6 +40,7 @@ export default function PublicarProcura() {
   const existing = useApi(editing ? `/demandas/${id}` : null, undefined, { enabled: editing })
   const [initial, setInitial] = useState(EMPTY)
   const [form, setForm] = useState(EMPTY)
+  const [novo, setNovo] = useState({ nome: '', categoria: 'Legumes' })
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -75,6 +77,7 @@ export default function PublicarProcura() {
     e.preventDefault()
     const found = {}
     if (!form.produtoId) found.produtoId = 'Escolha o produto, ex.: Tomate italiano.'
+    if (form.produtoId === NOVO && novo.nome.trim().length < 2) found.novoNome = 'Informe o nome do produto, ex.: Pimentão vermelho.'
     if (!(Number(form.quantidade) > 0)) found.quantidade = 'Informe a quantidade, ex.: 300.'
     if (!form.prazo) found.prazo = 'Informe até quando precisa.'
     else if (form.prazo < todayInput()) found.prazo = 'O prazo não pode estar no passado.'
@@ -88,7 +91,6 @@ export default function PublicarProcura() {
     setSending(true)
     setError('')
     const body = {
-      produtoId: Number(form.produtoId),
       quantidade: Number(form.quantidade),
       unidade: form.unidade,
       precoMaximo: parseMoney(form.precoMaximo),
@@ -98,6 +100,7 @@ export default function PublicarProcura() {
       observacoes: form.observacoes || null,
     }
     try {
+      body.produtoId = await garantirProduto(form.produtoId, novo, form.unidade)
       const saved = await api(editing ? `/demandas/${id}` : '/demandas', { method: editing ? 'PUT' : 'POST', body })
       setInitial(form)
       const n = saved.produtoresAvisados
@@ -117,8 +120,8 @@ export default function PublicarProcura() {
     varejista: { organizacao: usuario.organizacao, iniciais: usuario.iniciais, tipoEstabelecimento: `${usuario.tipoEstabelecimento ?? 'Varejista'} · ${usuario.cidade ?? ''}` },
     status: 'ABERTA',
     urgente: form.prazo && new Date(form.prazo) - Date.now() < 3 * 864e5,
-    kind: produto?.foto ?? 'tomate',
-    produto: produto?.nome ?? 'seu produto',
+    kind: form.produtoId === NOVO ? 'outro' : (produto?.foto ?? 'tomate'),
+    produto: form.produtoId === NOVO ? novo.nome || 'novo produto' : (produto?.nome ?? 'seu produto'),
     quantidade: Number(form.quantidade) || 0,
     unidade: form.unidade,
     prazo: form.prazo || null,
@@ -160,16 +163,16 @@ export default function PublicarProcura() {
         <div className="offer-layout publish-layout">
           <Card className="panel offer-form">
             <div className="grid-3 grid-3--m">
-              <Field label="O que você procura? *" icon={Search} error={errors.produtoId} className="span-m">
-                <select className="field__input" name="produtoId" value={form.produtoId} onChange={set('produtoId')}>
-                  <option value="">Escolha…</option>
-                  {produtos.data?.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nome}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              <ProdutoSelect
+                label="O que você procura? *"
+                className="span-m"
+                produtos={produtos.data ?? []}
+                value={form.produtoId}
+                onChange={set('produtoId')}
+                novo={novo}
+                onNovoChange={setNovo}
+                errors={errors}
+              />
               <Field label="Quantidade *" icon={Package} name="quantidade" placeholder="300" inputMode="numeric" value={form.quantidade} onChange={set('quantidade')} error={errors.quantidade} />
               <Field label="Unidade" icon={ChevronDown}>
                 <select className="field__input" name="unidade" value={form.unidade} onChange={set('unidade')}>

@@ -4,6 +4,7 @@ import { Calendar, Check, ChevronDown, ChevronLeft, House, Package, Sparkles, Sp
 import { Button, Card, Field, IconTile, Toggle } from '../../components/ui'
 import { ProductCard } from '../../components/cards'
 import { LoadState, Notice } from '../../components/Feedback'
+import ProdutoSelect, { NOVO, garantirProduto } from '../../components/ProdutoSelect'
 import { api } from '../../api/client'
 import { useApi } from '../../hooks/useApi'
 import { useUnsavedChanges } from '../../hooks/useUnsavedChanges'
@@ -66,6 +67,7 @@ export default function CadastrarOferta() {
   const existing = useApi(editing ? `/ofertas/${id}` : null, undefined, { enabled: editing })
   const [initial, setInitial] = useState(EMPTY)
   const [form, setForm] = useState(EMPTY)
+  const [novo, setNovo] = useState({ nome: '', categoria: 'Legumes' })
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [sending, setSending] = useState(false)
@@ -117,6 +119,7 @@ export default function CadastrarOferta() {
   const save = async (e, rascunho = false) => {
     e?.preventDefault()
     const found = validate(form)
+    if (form.produtoId === NOVO && novo.nome.trim().length < 2) found.novoNome = 'Informe o nome do produto, ex.: Pimentão vermelho.'
     setErrors(found)
     const first = Object.keys(found)[0]
     if (first) {
@@ -126,7 +129,6 @@ export default function CadastrarOferta() {
     setSending(true)
     setError('')
     const body = {
-      produtoId: Number(form.produtoId),
       propriedadeId: Number(form.propriedadeId),
       variedade: form.variedade || null,
       quantidade: Number(form.quantidade),
@@ -140,6 +142,7 @@ export default function CadastrarOferta() {
       rascunho,
     }
     try {
+      body.produtoId = await garantirProduto(form.produtoId, novo, form.unidade)
       const saved = await api(editing ? `/ofertas/${id}` : '/ofertas', { method: editing ? 'PUT' : 'POST', body })
       const notified = saved.demandasAvisadas ? ` ${saved.demandasAvisadas} ${saved.demandasAvisadas === 1 ? 'varejista com Procura-se compatível foi avisado' : 'varejistas com Procura-se compatível foram avisados'}.` : ''
       const verb = rascunho ? 'salva como rascunho' : editing ? 'atualizada' : 'publicada'
@@ -154,9 +157,9 @@ export default function CadastrarOferta() {
   const leave = () => confirmLeave() && navigate('/produtor/produtos')
 
   const preview = {
-    produto: produto?.nome ?? 'Seu produto',
+    produto: form.produtoId === NOVO ? novo.nome || 'Novo produto' : (produto?.nome ?? 'Seu produto'),
     variedade: form.variedade,
-    kind: produto?.foto,
+    kind: form.produtoId === NOVO ? 'outro' : produto?.foto,
     propriedade: { nome: propriedade?.nome ?? 'Sua propriedade' },
     preco: parseMoney(form.preco) ?? 0,
     unidade: form.unidade,
@@ -234,25 +237,7 @@ export default function CadastrarOferta() {
             </div>
 
             <div className="grid-2">
-              <Field label="Produto *" icon={Package} error={errors.produtoId}>
-                <select className="field__input" name="produtoId" value={form.produtoId} onChange={set('produtoId')} aria-invalid={errors.produtoId ? true : undefined}>
-                  <option value="">Escolha…</option>
-                  {['Hortaliças', 'Legumes', 'Frutas', 'Grãos'].map((cat) => {
-                    const items = produtos.data?.filter((p) => p.categoria === cat) ?? []
-                    return (
-                      items.length > 0 && (
-                        <optgroup key={cat} label={cat}>
-                          {items.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.nome}
-                            </option>
-                          ))}
-                        </optgroup>
-                      )
-                    )
-                  })}
-                </select>
-              </Field>
+              <ProdutoSelect produtos={produtos.data ?? []} value={form.produtoId} onChange={set('produtoId')} novo={novo} onNovoChange={setNovo} errors={errors} />
               <Field label="Variedade" icon={Sprout} name="variedade" placeholder="Crespa verde" value={form.variedade} onChange={set('variedade')} error={errors.variedade} />
             </div>
 

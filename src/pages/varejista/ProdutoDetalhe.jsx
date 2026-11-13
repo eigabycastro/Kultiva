@@ -209,8 +209,8 @@ export default function ProdutoDetalhe() {
           ) : (
             <Notice tone="warning">Esta oferta está sem estoque no momento. Favorite para acompanhar ou publique um Procura-se.</Notice>
           )}
-          <Button variant="ghost" icon={MessageCircle} to="/varejista/negociacoes" className="only-desktop">
-            Negociar preço pelo chat
+          <Button variant="secondary" icon={MessageCircle} to={`/varejista/negociacoes?com=${p.produtor.id}&oferta=${p.id}`}>
+            Negociar com o produtor
           </Button>
         </div>
       </div>

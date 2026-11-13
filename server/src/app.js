@@ -8,12 +8,15 @@ import { autenticar } from './middleware/auth.js'
 import { naoEncontrado, tratarErros } from './middleware/errors.js'
 import admin from './routes/admin.js'
 import auth, { cepRouter } from './routes/auth.js'
+import calendario from './routes/calendario.js'
 import dashboard from './routes/dashboard.js'
 import demandas from './routes/demandas.js'
 import favoritos from './routes/favoritos.js'
+import mensagens from './routes/mensagens.js'
 import notificacoes from './routes/notificacoes.js'
 import ofertas from './routes/ofertas.js'
 import pedidos from './routes/pedidos.js'
+import previsao from './routes/previsao.js'
 import produtos from './routes/produtos.js'
 import propriedades from './routes/propriedades.js'
 
@@ -43,6 +46,9 @@ export function criarApp() {
   privado.use('/demandas', demandas)
   privado.use('/notificacoes', notificacoes)
   privado.use('/favoritos', favoritos)
+  privado.use('/mensagens', mensagens)
+  privado.use('/calendario', calendario)
+  privado.use('/previsao', previsao)
   privado.use('/dashboard', dashboard)
   privado.use('/admin', admin)
   app.use('/api', privado)

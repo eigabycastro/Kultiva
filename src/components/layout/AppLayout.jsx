@@ -35,7 +35,7 @@ export const NAV = {
     { to: '/produtor/procura-se', label: 'Procura-se', icon: Megaphone },
     { to: '/produtor/propriedades', label: 'Propriedades', icon: MapPinned },
     { to: '/produtor/negociacoes', label: 'Negociações', icon: MessageCircle },
-    { to: '/produtor/previsao', label: 'Previsão IA', icon: Sparkle },
+    { to: '/produtor/previsao', label: 'Previsão de preço', icon: Sparkle },
     { to: '/produtor/calendario', label: 'Calendário de safra', icon: Calendar },
   ],
   varejista: [

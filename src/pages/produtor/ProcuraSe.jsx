@@ -98,7 +98,7 @@ export default function ProcuraSe() {
               actions={
                 <div className="demand-card__actions">
                   {d.compativel ? (
-                    <Button size="s" icon={MessageCircle} to="/produtor/negociacoes" className="demand-card__offer">
+                    <Button size="s" icon={MessageCircle} to={`/produtor/negociacoes?com=${d.varejista.id}`} className="demand-card__offer">
                       Negociar
                     </Button>
                   ) : (

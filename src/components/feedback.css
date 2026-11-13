@@ -169,3 +169,10 @@ select.field__input {
 .demand-card__actions {
   flex-wrap: wrap;
 }
+
+/* Campos de "Outro produto" ocupam a linha inteira, logo abaixo do produto */
+.grid-2 > .novo-produto,
+.grid-3 > .novo-produto {
+  grid-column: 1 / -1;
+  order: 10;
+}

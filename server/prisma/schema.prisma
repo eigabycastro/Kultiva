@@ -67,12 +67,14 @@ model Usuario {
   criadoEm            DateTime @default(now())
   atualizadoEm        DateTime @updatedAt
 
-  propriedades     Propriedade[]
-  pedidosFeitos    Pedido[]      @relation("PedidosVarejista")
-  pedidosRecebidos Pedido[]      @relation("PedidosProdutor")
-  demandas         Demanda[]
-  notificacoes     Notificacao[]
-  favoritos        Favorito[]
+  propriedades       Propriedade[]
+  pedidosFeitos      Pedido[]      @relation("PedidosVarejista")
+  pedidosRecebidos   Pedido[]      @relation("PedidosProdutor")
+  demandas           Demanda[]
+  notificacoes       Notificacao[]
+  favoritos          Favorito[]
+  mensagensEnviadas  Mensagem[]    @relation("MensagensEnviadas")
+  mensagensRecebidas Mensagem[]    @relation("MensagensRecebidas")
 
   @@index([perfil])
 }
@@ -101,7 +103,8 @@ model Propriedade {
 model Produto {
   id            Int    @id @default(autoincrement())
   nome          String @unique
-  foto          String // qual foto o front usa: alface, tomate, morango, couve, cenoura, banana
+  foto          String @default("outro") // foto usada no front: alface, tomate, morango, couve, cenoura, banana ou outro
+  criadoPorId   Int? // produtor que cadastrou o produto (null = catálogo da Kultiva)
   categoria     String // Hortaliças, Frutas, Legumes, Grãos
   unidadePadrao String
 
@@ -133,24 +136,25 @@ model Oferta {
   produto     Produto      @relation(fields: [produtoId], references: [id])
   itens       ItemPedido[]
   favoritos   Favorito[]
+  mensagens   Mensagem[]
 
   @@index([produtoId])
   @@index([status])
 }
 
 model Pedido {
-  id          Int          @id @default(autoincrement())
-  varejistaId Int
-  produtorId  Int
-  status      StatusPedido @default(PENDENTE)
-  total       Decimal      @db.Decimal(12, 2)
-  dataEntrega DateTime?
-  observacao  String?
-  motivo      String? // motivo da recusa ou do cancelamento
-  criadoEm    DateTime     @default(now())
-  atualizadoEm DateTime    @updatedAt
-  aceitoEm    DateTime?
-  entregueEm  DateTime?
+  id           Int          @id @default(autoincrement())
+  varejistaId  Int
+  produtorId   Int
+  status       StatusPedido @default(PENDENTE)
+  total        Decimal      @db.Decimal(12, 2)
+  dataEntrega  DateTime?
+  observacao   String?
+  motivo       String? // motivo da recusa ou do cancelamento
+  criadoEm     DateTime     @default(now())
+  atualizadoEm DateTime     @updatedAt
+  aceitoEm     DateTime?
+  entregueEm   DateTime?
 
   varejista Usuario      @relation("PedidosVarejista", fields: [varejistaId], references: [id])
   produtor  Usuario      @relation("PedidosProdutor", fields: [produtorId], references: [id])
@@ -220,4 +224,22 @@ model Favorito {
   oferta    Oferta  @relation(fields: [ofertaId], references: [id], onDelete: Cascade)
 
   @@id([varejistaId, ofertaId])
+}
+
+// Chat de negociação entre produtor e varejista (a conversa é o par de usuários)
+model Mensagem {
+  id             Int      @id @default(autoincrement())
+  remetenteId    Int
+  destinatarioId Int
+  ofertaId       Int? // oferta sendo negociada, quando a conversa começa por um produto
+  texto          String
+  lida           Boolean  @default(false)
+  criadoEm       DateTime @default(now())
+
+  remetente    Usuario @relation("MensagensEnviadas", fields: [remetenteId], references: [id], onDelete: Cascade)
+  destinatario Usuario @relation("MensagensRecebidas", fields: [destinatarioId], references: [id], onDelete: Cascade)
+  oferta       Oferta? @relation(fields: [ofertaId], references: [id], onDelete: SetNull)
+
+  @@index([remetenteId, destinatarioId, criadoEm])
+  @@index([destinatarioId, lida])
 }

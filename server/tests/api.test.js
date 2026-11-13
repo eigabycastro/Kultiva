@@ -175,3 +175,57 @@ describe('busca e Procura-se', () => {
     expect(regiao.body.data.some((d) => d.id === r.body.id && d.compativel)).toBe(true)
   })
 })
+
+describe('chat de negociação e catálogo', () => {
+  let produtorId
+  beforeAll(async () => {
+    produtorId = (await request(app).get('/api/auth/me').set(auth(tokenProdutor))).body.id
+  })
+
+  it('varejista manda mensagem e o produtor vê a conversa com não lida', async () => {
+    const r = await request(app).post(`/api/mensagens/${produtorId}`).set(auth(tokenVarejista)).send({ texto: 'Tem tomate para sexta?', ofertaId: oferta.id })
+    expect(r.status).toBe(201)
+    expect(r.body.minha).toBe(true)
+
+    const lista = await request(app).get('/api/mensagens/conversas').set(auth(tokenProdutor))
+    const conversa = lista.body.data.find((c) => c.contato.id === varejistaId)
+    expect(conversa.naoLidas).toBe(1)
+    expect(conversa.ultima.texto).toBe('Tem tomate para sexta?')
+
+    // abrir a conversa marca como lida e traz a oferta negociada
+    const aberta = await request(app).get(`/api/mensagens/${varejistaId}`).set(auth(tokenProdutor))
+    expect(aberta.body.oferta.id).toBe(oferta.id)
+    expect(aberta.body.mensagens).toHaveLength(1)
+    const depois = await request(app).get('/api/mensagens/conversas').set(auth(tokenProdutor))
+    expect(depois.body.naoLidas).toBe(0)
+
+    const n = await request(app).get('/api/notificacoes?tipo=MENSAGEM').set(auth(tokenProdutor))
+    expect(n.body.data[0].link).toBe(`/produtor/negociacoes?com=${varejistaId}`)
+  })
+
+  it('não permite conversa com admin, consigo mesmo nem mensagem vazia', async () => {
+    const adminId = (await request(app).get('/api/auth/me').set(auth(tokenAdmin))).body.id
+    expect((await request(app).post(`/api/mensagens/${adminId}`).set(auth(tokenVarejista)).send({ texto: 'oi' })).status).toBe(404) // admin não participa do chat
+    expect((await request(app).post(`/api/mensagens/${varejistaId}`).set(auth(tokenVarejista)).send({ texto: 'oi' })).status).toBe(400)
+    expect((await request(app).post(`/api/mensagens/${produtorId}`).set(auth(tokenVarejista)).send({ texto: '   ' })).status).toBe(400)
+  })
+
+  it('produtor cadastra um produto novo e o nome repetido reaproveita o mesmo', async () => {
+    const nome = `Pimentão teste ${tag}`
+    const a = await request(app).post('/api/produtos').set(auth(tokenProdutor)).send({ nome, categoria: 'Legumes', unidadePadrao: 'kg' })
+    expect(a.status).toBe(201)
+    expect(a.body.foto).toBe('outro')
+    const b = await request(app).post('/api/produtos').set(auth(tokenProdutor)).send({ nome: nome.toUpperCase(), categoria: 'Legumes', unidadePadrao: 'kg' })
+    expect(b.status).toBe(200)
+    expect(b.body.id).toBe(a.body.id)
+    await prisma.produto.delete({ where: { id: a.body.id } })
+  })
+
+  it('calendário e previsão respondem para o produtor e bloqueiam o varejista', async () => {
+    const cal = await request(app).get('/api/calendario').set(auth(tokenProdutor))
+    expect(cal.status).toBe(200)
+    expect(cal.body.eventos.some((e) => e.tipo === 'colheita')).toBe(true)
+    expect((await request(app).get('/api/previsao').set(auth(tokenProdutor))).status).toBe(200)
+    expect((await request(app).get('/api/calendario').set(auth(tokenVarejista))).status).toBe(403)
+  })
+})

@@ -7,7 +7,6 @@ import { ProduceThumb } from '../../components/ProduceArt'
 import { MobileBell } from '../../components/layout/AppLayout'
 import { useAuth } from '../../auth/AuthContext'
 import { useApi } from '../../hooks/useApi'
-import { priceForecast } from '../../data/mock'
 import { formatBRL, formatBRLCompact, formatDay, formatQty } from '../../utils/format'
 import { ORDER_STATUS } from '../../utils/status'
 import '../pages.css'
@@ -40,6 +39,7 @@ export default function Dashboard() {
   const { usuario } = useAuth()
   const { data: d, error, loading, reload } = useApi('/dashboard')
   const demands = useApi('/demandas', { pageSize: 5 })
+  const forecast = useApi('/previsao').data?.previsao
 
   const kpis = d && [
     { icon: 'chart', label: 'Vendas do mês', value: formatBRL(d.totalMes), mobileValue: formatBRLCompact(d.totalMes), delta: delta(d.variacaoMes), tone: d.variacaoMes < 0 ? 'warning' : 'success', note: 'vs. mês anterior' },
@@ -238,30 +238,36 @@ export default function Dashboard() {
         </LoadState>
       </Card>
 
-      {/* Previsão de preço com IA: ponto de complexidade opcional (Release 4). Ainda usa dados de exemplo. */}
-      <Card className="panel forecast" id="previsao">
-        <div className="panel__head">
-          <div>
-            <h2 className="h3">Previsão de preço — {priceForecast.product}</h2>
-            <p className="body-s t-tertiary">Prévia do módulo de IA (dados de exemplo, chega na Release 4)</p>
+      {forecast?.historico && (
+        <Card className="panel forecast" id="previsao">
+          <div className="panel__head">
+            <div>
+              <h2 className="h3">Previsão de preço — {forecast.produto}</h2>
+              <p className="body-s t-tertiary">R$/{forecast.unidade} · 6 semanas de vendas na região + projeção de 3 semanas</p>
+            </div>
+            <Badge tone="warning" icon={Sparkle}>
+              Projeção
+            </Badge>
           </div>
-          <Badge tone="warning" icon={Sparkle}>
-            Em breve
-          </Badge>
-        </div>
-        <div className="only-desktop">
-          <ForecastChart bars={priceForecast.bars} />
-        </div>
-        <div className="ai-tip">
-          <IconTile icon={Sparkles} tone="accent" className="only-desktop" />
-          <div>
-            <p className="label-m">A IA vai estimar a melhor janela de venda a partir do histórico de pedidos.</p>
-            <Link to="/produtor/previsao" className="body-s t-brand">
-              Ver prévia da Previsão IA
-            </Link>
+          <div className="only-desktop">
+            <ForecastChart
+              bars={[
+                ...forecast.historico.map((h) => ({ date: formatDay(h.semana), price: h.preco })),
+                ...forecast.projecao.map((h) => ({ date: formatDay(h.semana), price: h.preco, forecast: true })),
+              ]}
+            />
           </div>
-        </div>
-      </Card>
+          <div className="ai-tip">
+            <IconTile icon={Sparkles} tone="accent" className="only-desktop" />
+            <div>
+              <p className="label-m">{forecast.dicas[0]}</p>
+              <Link to={`/produtor/previsao?produto=${forecast.produtoId}`} className="body-s t-brand">
+                Ver previsão completa
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

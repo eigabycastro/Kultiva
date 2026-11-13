@@ -48,7 +48,7 @@ async function main() {
   console.log('Limpando o banco…')
   // apaga os dados de demonstração e reinicia os IDs (os pedidos voltam a começar em #KT-1001)
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "Notificacao", "Favorito", "ItemPedido", "Pedido", "Demanda", "Oferta", "Propriedade", "Produto", "Usuario" RESTART IDENTITY CASCADE',
+    'TRUNCATE "Mensagem", "Notificacao", "Favorito", "ItemPedido", "Pedido", "Demanda", "Oferta", "Propriedade", "Produto", "Usuario" RESTART IDENTITY CASCADE',
   )
 
   const senhaHash = await bcrypt.hash(SENHA, 10)
@@ -153,6 +153,21 @@ async function main() {
     ['Mercado Mais', 'Horta da Serra', 'Couve manteiga', 80, 2.5, 'ENTREGUE', -14],
     ['Mercado Mais', 'Sítio Dois Irmãos', 'Cenoura', 300, 3.8, 'CANCELADO', -18],
     ['Mercado Mais', 'Fazenda Água Limpa', 'Banana prata', 250, 4.2, 'ACEITO', -1],
+    // histórico regional usado pela previsão de preço
+    ['Hortifruti Bom Preço', 'Fazenda Santa Luzia', 'Tomate italiano', 150, 4.8, 'ENTREGUE', -40],
+    ['Restaurante Sabor da Terra', 'Sítio Dois Irmãos', 'Tomate italiano', 90, 4.9, 'ENTREGUE', -33],
+    ['Mercadinho Central', 'Fazenda Santa Luzia', 'Tomate italiano', 200, 5.0, 'ENTREGUE', -26],
+    ['Escola Municipal Aurora', 'Fazenda Santa Luzia', 'Tomate italiano', 120, 5.1, 'ENTREGUE', -19],
+    ['Hortifruti Bom Preço', 'Sítio Dois Irmãos', 'Tomate italiano', 100, 5.3, 'ENTREGUE', -12],
+    ['Mercadinho Central', 'Fazenda Santa Luzia', 'Tomate italiano', 160, 5.35, 'ACEITO', -4],
+    ['Mercadinho Central', 'Horta da Serra', 'Alface crespa', 80, 3.1, 'ENTREGUE', -37],
+    ['Restaurante Sabor da Terra', 'Horta da Serra', 'Alface crespa', 70, 3.0, 'ENTREGUE', -24],
+    ['Hortifruti Bom Preço', 'Horta da Serra', 'Alface crespa', 90, 3.0, 'ENTREGUE', -16],
+    ['Escola Municipal Aurora', 'Horta da Serra', 'Alface crespa', 120, 2.95, 'ACEITO', -5],
+    ['Mercadinho Central', 'Chácara Recanto', 'Morango', 20, 11.0, 'ENTREGUE', -35],
+    ['Restaurante Sabor da Terra', 'Chácara Recanto', 'Morango', 15, 11.4, 'ENTREGUE', -21],
+    ['Hortifruti Bom Preço', 'Chácara Recanto', 'Morango', 25, 11.8, 'ENTREGUE', -13],
+    ['Escola Municipal Aurora', 'Fazenda Água Limpa', 'Morango', 10, 12.4, 'ACEITO', -3],
   ]
   for (const [v, p, nome, quantidade, preco, status, criado] of PEDIDOS) {
     const o = oferta(p, nome)
@@ -207,6 +222,38 @@ async function main() {
     await prisma.favorito.create({ data: { varejistaId: vare['Mercado Mais'].id, ofertaId: oferta(p, nome).id } })
   }
 
+  // Conversas de negociação (chat)
+  const minutos = (dias, hora, min) => {
+    const d = dia(dias, hora)
+    d.setMinutes(min)
+    return d
+  }
+  const alface = oferta('Sítio Boa Vista', 'Alface crespa').id
+  const CONVERSAS = [
+    [vare['Mercado Mais'], prod['Sítio Boa Vista'], alface, [
+      ['v', 'Olá, João! Vocês têm alface crespa para entrega na quinta?', 0, 9, 32, true],
+      ['p', 'Bom dia! Tenho sim, 240 maços colhidos hoje cedo.', 0, 9, 35, true],
+      ['v', 'Ótimo. Preciso de 120 maços. Fecha por R$ 3,00 o maço?', 0, 9, 38, true],
+      ['p', 'Para 120 consigo R$ 3,20 com entrega inclusa até 12 km.', 0, 9, 41, true],
+      ['v', 'Perfeito, vou fazer o pedido pela plataforma.', 0, 9, 46, true],
+      ['p', 'Fechado! Assim que chegar eu aceito e separo os 120 maços.', 0, 9, 48, false],
+    ]],
+    [vare['Restaurante Sabor da Terra'], prod['Sítio Boa Vista'], oferta('Sítio Boa Vista', 'Tomate italiano').id, [
+      ['v', 'João, o tomate italiano dá para entregar até sexta?', 0, 8, 10, true],
+      ['v', 'Mandei um pedido de 80 kg, se puder confirmar hoje agradeço.', 0, 8, 12, false],
+    ]],
+    [vare['Mercado Mais'], prod['Fazenda Santa Luzia'], oferta('Fazenda Santa Luzia', 'Tomate italiano').id, [
+      ['v', 'Marta, vi seu tomate a R$ 5,20. Consegue 300 kg por semana?', -1, 15, 0, true],
+      ['p', 'Consigo sim. Acima de 500 kg faço R$ 5,10.', -1, 15, 20, false],
+    ]],
+  ]
+  for (const [v, p, ofertaId, msgs] of CONVERSAS) {
+    for (const [quem, texto, d, h, m, lida] of msgs) {
+      const [remetenteId, destinatarioId] = quem === 'v' ? [v.id, p.id] : [p.id, v.id]
+      await prisma.mensagem.create({ data: { remetenteId, destinatarioId, texto, ofertaId, lida, criadoEm: minutos(d, h, m) } })
+    }
+  }
+
   // Notificações iniciais
   const joao = prod['Sítio Boa Vista'].id
   const mm = vare['Mercado Mais'].id
@@ -214,6 +261,8 @@ async function main() {
     data: [
       { usuarioId: joao, tipo: 'DEMANDA', titulo: 'Mercado Mais procura 300 kg de Tomate italiano', texto: 'Você tem 820 kg em Sítio Boa Vista · paga até R$ 5,80/kg', link: '/produtor/procura-se', criadoEm: dia(0, 7) },
       { usuarioId: joao, tipo: 'PEDIDO', titulo: `Novo pedido de Mercado Mais`, texto: '120 maço de alface crespa · R$ 384,00', link: '/produtor/pedidos', criadoEm: dia(0, 8) },
+      { usuarioId: joao, tipo: 'MENSAGEM', titulo: 'Nova mensagem de Restaurante Sabor da Terra', texto: 'Mandei um pedido de 80 kg, se puder confirmar hoje agradeço.', link: `/produtor/negociacoes?com=${vare['Restaurante Sabor da Terra'].id}`, criadoEm: dia(0, 8) },
+      { usuarioId: mm, tipo: 'MENSAGEM', titulo: 'Nova mensagem de Fazenda Santa Luzia', texto: 'Consigo sim. Acima de 500 kg faço R$ 5,10.', link: `/varejista/negociacoes?com=${prod['Fazenda Santa Luzia'].id}`, criadoEm: dia(-1, 15) },
       { usuarioId: joao, tipo: 'PRECO', titulo: 'Preço do tomate subiu 8% na sua região', texto: 'Média de R$ 5,60/kg nos últimos 7 dias.', link: '/produtor/previsao', criadoEm: dia(-1, 10) },
       { usuarioId: joao, tipo: 'SISTEMA', titulo: 'Couve e morango estão acabando', texto: 'Atualize o estoque ou pause as ofertas para não receber pedidos que não pode atender.', link: '/produtor/produtos', lida: true, criadoEm: dia(-1, 7) },
       { usuarioId: mm, tipo: 'PEDIDO', titulo: 'Pedido aceito por Fazenda Água Limpa', texto: '250 kg de banana prata · R$ 1.050,00', link: '/varejista/pedidos', criadoEm: dia(-1, 11) },
@@ -221,7 +270,7 @@ async function main() {
     ],
   })
 
-  console.log(`Pronto! ${ofertas.length} ofertas, ${PEDIDOS.length} pedidos, ${DEMANDAS.length} demandas. Senha de todas as contas: ${SENHA}`)
+  console.log(`Pronto! ${ofertas.length} ofertas, ${PEDIDOS.length} pedidos, ${DEMANDAS.length} demandas, ${CONVERSAS.length} conversas. Senha de todas as contas: ${SENHA}`)
 }
 
 main()

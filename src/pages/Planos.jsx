@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { Check, ShieldCheck } from 'lucide-react'
 import { Badge, Button, IconTile, Segmented, cx } from '../components/ui'
 import { icon } from '../components/icons'
-import { plans } from '../data/mock'
+import { plans } from '../data/planos'
+import { useAuth } from '../auth/AuthContext'
 import './pages.css'
 import './planos.css'
 
 export default function Planos() {
+  const { usuario } = useAuth()
+  const isCurrent = (p) => (usuario.plano === 'Gratuito' ? p.id === 'free' : p.name === usuario.plano)
   const [period, setPeriod] = useState('mensal')
 
   return (
@@ -45,8 +48,8 @@ export default function Planos() {
               <span className="plan__amount" aria-live="polite">{period === 'anual' && p.yearlyPrice ? p.yearlyPrice : p.price}</span>
               <span className="body-s plan__desc">{p.period}</span>
             </div>
-            <Button variant={p.ctaVariant} block disabled={p.id === 'free'}>
-              {p.cta}
+            <Button variant={isCurrent(p) ? 'secondary' : p.ctaVariant} block disabled={isCurrent(p)}>
+              {isCurrent(p) ? 'Plano atual' : p.id === 'free' ? 'Plano gratuito' : p.cta}
             </Button>
             <ul className="plan__features">
               {p.features.map((f) => (

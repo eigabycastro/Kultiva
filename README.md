@@ -13,7 +13,7 @@ o produtor publica o que colheu, o mercado encontra perto de casa e o pedido bai
 ![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
 ![Node](https://img.shields.io/badge/Node.js-Express_5-339933?logo=node.js&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-PostgreSQL-2d3748?logo=prisma&logoColor=white)
-![Testes](https://img.shields.io/badge/testes-23_passando-2e7d32)
+![Testes](https://img.shields.io/badge/testes-27_passando-2e7d32)
 
 Agro + Sustentabilidade · UNIVÁS
 
@@ -50,17 +50,18 @@ A Kultiva resolve isso com:
 - **Busca por região:** a distância entre o varejista e cada propriedade é calculada e entra no filtro e na ordenação.
 - **Estoque em tempo real:** cada pedido aceito baixa a quantidade disponível, e o sistema não aceita pedido acima do estoque.
 - **Procura-se:** o varejista publica o que precisa e os produtores compatíveis são avisados na hora.
+- **Negociação pelo chat:** produtor e varejista conversam dentro da plataforma, com a oferta negociada ao lado.
 - **Histórico de pedidos:** compras e vendas registradas, com filtro, busca e exportação em CSV.
 
 ## Release 3: o que foi entregue
 
 | Requisito da release | Situação | Onde está |
 | --- | :---: | --- |
-| CRUDs obrigatórios e relacionamentos | ✅ | **Propriedade**, **Oferta** e **Procura-se (Demanda)** completos pela interface; Pedido, Notificação e Favorito também. 1:N e N:N no [modelo de dados](#modelo-de-dados) |
+| CRUDs obrigatórios e relacionamentos | ✅ | **Propriedade**, **Oferta** e **Procura-se (Demanda)** completos pela interface; Pedido, Mensagem, Notificação, Favorito e cadastro de produto novo também. 1:N e N:N no [modelo de dados](#modelo-de-dados) |
 | Perfis de acesso e rotas protegidas no back-end | ✅ | JWT + middleware `permitir('PRODUTOR')` em cada rota ([server/src/middleware/auth.js](server/src/middleware/auth.js)); o front também bloqueia rotas por perfil |
 | Regra de negócio principal | ✅ | Fluxo de status do pedido com baixa atômica de estoque ([server/src/services/pedidos.js](server/src/services/pedidos.js)) + match do Procura-se ([server/src/services/match.js](server/src/services/match.js)) |
 | Busca/filtro e paginação | ✅ | Ofertas (texto, categoria, preço, distância, colheita, orgânico, ordenação), pedidos (status, texto, período), demandas, notificações e usuários, todos paginados |
-| As 8 telas mínimas | ✅ | 16 telas já funcionam com dados reais da API ([lista](#telas)) |
+| As 8 telas mínimas | ✅ | 20 telas, todas com dados reais da API ([lista](#telas)) |
 | Metade dos pontos de complexidade | ✅ | 6 de 12 pontos ([tabela](#pontos-de-complexidade)) |
 | Demonstração ao vivo + tag `v0.3` | ✅ | [Roteiro da demonstração](#roteiro-da-demonstração) |
 
@@ -73,7 +74,7 @@ A Kultiva resolve isso com:
 | Dashboard com gráficos | 2 | ✅ | Vendas por semana, mais vendidos, KPIs do mês ([Dashboard.jsx](src/pages/produtor/Dashboard.jsx)) |
 | Integração com API externa | 2 | ✅ | ViaCEP preenche o endereço no cadastro e nas propriedades; coordenadas + distância (Haversine) priorizam a região |
 | CI/CD com deploy automático | 3 | 🟡 | CI pronto (lint, build e testes com PostgreSQL); o deploy automático entra na R4 |
-| Tempo real com WebSocket | 3 | ⏳ | Release 4 (chat e avisos ao vivo) |
+| Tempo real com WebSocket | 3 | ⏳ | O chat já grava no banco e atualiza a cada 5 s; o Socket.IO entra na Release 4 |
 | **Concluído** | **6 / 12** | | |
 
 ## Como rodar
@@ -115,7 +116,7 @@ Todas com a senha **`kultiva123`**. Na tela de login há atalhos para preencher 
 
 ## Roteiro da demonstração
 
-Leva uns 8 minutos e passa por todos os itens da Release 3.
+Leva uns 10 minutos e passa por todos os itens da Release 3.
 
 1. **Rotas protegidas.** Abra `/produtor` sem login e veja o redirecionamento para `/login`. Em `/docs`, chame `GET /api/ofertas` sem token e veja o `401`.
 2. **Varejista busca.** Entre como *Mercado Mais* e abra **Buscar produtos**. Mude o raio de 30 para 10 km, filtre por "Legumes" e preço máximo de 5,50, ordene por menor preço e passe para a página 2.
@@ -124,8 +125,9 @@ Leva uns 8 minutos e passa por todos os itens da Release 3.
 5. **Produtor aceita.** Saia e entre como *João*. O sino mostra o novo pedido. Em **Pedidos**, clique em **Aceitar**: o estoque cai na hora em **Meus produtos**.
 6. **Concorrência.** Se dois pedidos somam mais que o estoque, o segundo aceite é recusado com `409` e nada é baixado.
 7. **CRUDs do produtor.** Em **Propriedades**, cadastre uma propriedade nova digitando só o CEP (ViaCEP preenche a cidade). Em **Meus produtos**, crie, edite, pause e exclua uma oferta.
-8. **Procura-se.** Como varejista, publique "200 kg de Banana prata até R$ 4,50". A tela mostra quantos produtores compatíveis existem antes de publicar, e eles recebem a notificação.
-9. **Administrador.** Entre como admin, bloqueie um varejista e tente logar com ele: acesso negado.
+8. **Chat e produto novo.** Na mesma oferta, clique em **Negociar com o produtor** e mande uma mensagem; entre como João e responda pela tela **Negociações**. Depois, em **Cadastrar oferta**, escolha **Outro produto** e publique "Pimentão vermelho".
+9. **Procura-se.** Como varejista, publique "200 kg de Banana prata até R$ 4,50". A tela mostra quantos produtores compatíveis existem antes de publicar, e eles recebem a notificação.
+10. **Administrador.** Entre como admin, bloqueie um varejista e tente logar com ele: acesso negado.
 
 ## Regra de negócio
 
@@ -165,6 +167,8 @@ erDiagram
     PRODUTO ||--o{ DEMANDA : "é procurado em"
     USUARIO ||--o{ NOTIFICACAO : recebe
     USUARIO ||--o{ FAVORITO : salva
+    USUARIO ||--o{ MENSAGEM : "envia e recebe"
+    OFERTA ||--o{ MENSAGEM : "é negociada em"
     OFERTA ||--o{ FAVORITO : "é salva em"
 
     USUARIO {
@@ -212,7 +216,7 @@ erDiagram
 ```
 
 - **1:N:** Produtor → Propriedades → Ofertas; Varejista → Pedidos; Varejista → Demandas.
-- **N:N:** Pedido ↔ Oferta pela tabela **ItemPedido** (quantidade e preço negociado). Varejista ↔ Oferta pela tabela **Favorito**.
+- **N:N:** Pedido ↔ Oferta pela tabela **ItemPedido** (quantidade e preço negociado). Varejista ↔ Oferta pela tabela **Favorito**. Usuário ↔ Usuário pela tabela **Mensagem** (chat).
 - Schema completo em [server/prisma/schema.prisma](server/prisma/schema.prisma).
 
 ## API
@@ -223,10 +227,13 @@ REST em `/api`, documentada com Swagger em **`/docs`** (com botão *Authorize* p
 | --- | --- | --- |
 | Autenticação | `POST /auth/cadastro` · `POST /auth/login` · `POST /auth/logout` · `GET/PUT/DELETE /auth/me` | público / logado |
 | CEP | `GET /cep/:cep` (ViaCEP + coordenadas) | público |
+| Produtos | `GET /produtos` · `POST /produtos` (produto que não está no catálogo) | logado |
 | Propriedades | `GET POST /propriedades` · `GET PUT DELETE /propriedades/:id` | Produtor |
 | Ofertas | `GET /ofertas` (busca paginada) · `GET /ofertas/minhas` · `POST` · `PUT/DELETE /:id` · `PATCH /:id/status` | Produtor (CRUD) · todos (busca) |
 | Pedidos | `GET /pedidos` (histórico paginado) · `POST /pedidos` · `PATCH /pedidos/:id/status` | Varejista cria · Produtor aceita, recusa, entrega |
 | Procura-se | `GET POST /demandas` · `GET /demandas/previa` · `PUT/DELETE /:id` · `PATCH /:id/status` | Varejista (CRUD) · Produtor (vê as da região) |
+| Chat | `GET /mensagens/conversas` · `GET /mensagens/:usuarioId` · `POST /mensagens/:usuarioId` | Produtor e Varejista |
+| Planejamento | `GET /calendario?mes=` · `GET /previsao?produtoId=` | Produtor |
 | Notificações | `GET /notificacoes` · `GET /nao-lidas` · `PATCH /lidas` · `PATCH /:id/lida` · `DELETE /:id` | logado |
 | Favoritos | `GET /favoritos` · `POST/DELETE /favoritos/:ofertaId` | Varejista |
 | Dashboard | `GET /dashboard` | Produtor, Varejista |
@@ -265,7 +272,10 @@ Listas paginadas sempre respondem `{ data, page, pageSize, total, totalPages }`.
 | 15 | Favoritos | Varejista | `/varejista/favoritos` | API |
 | 16 | Perfil e configurações | Todos | `/…/perfil` | API |
 | 17 | Administração de usuários | Admin | `/admin/usuarios` | API |
-| — | Negociação (chat), Calendário de safra, Previsão IA, Planos | Produtor e Varejista | | exemplo (R4) |
+| 18 | Negociação (chat) com a oferta negociada | Produtor e Varejista | `/…/negociacoes` | API |
+| 19 | Calendário de safra (colheitas, fim de ofertas, entregas) | Produtor | `/produtor/calendario` | API |
+| 20 | Previsão de preço (tendência das vendas + dicas) | Produtor | `/produtor/previsao` | API |
+| — | Planos | Todos | `/…/planos` | conteúdo fixo |
 
 <table>
   <tr>
@@ -336,7 +346,7 @@ npm test          # roda os testes da API (precisa do banco rodando)
 npm run lint      # oxlint no front
 ```
 
-Os 23 testes cobrem:
+Os 27 testes cobrem:
 
 - o fluxo de status;
 - o bloqueio de pedido acima do estoque;
@@ -346,7 +356,9 @@ Os 23 testes cobrem:
 - o bloqueio pelo admin;
 - a validação;
 - a paginação;
-- o match do Procura-se.
+- o match do Procura-se;
+- o chat (não lidas, permissões) e o cadastro de produto novo;
+- o acesso ao calendário e à previsão.
 
 O workflow [ci.yml](.github/workflows/ci.yml) roda lint e build do front e os testes da API contra um PostgreSQL de verdade a cada push na `main` e em cada pull request.
 
@@ -363,10 +375,9 @@ Fluxo de trabalho: uma branch por funcionalidade, pull request revisado por outr
 
 ## Próximos passos (Release 4)
 
-- [ ] Chat de negociação em tempo real com Socket.IO (US11), com avisos ao vivo de pedido e Procura-se
+- [ ] Trocar a atualização a cada 5 s do chat por Socket.IO (US11), com avisos ao vivo de pedido e Procura-se
 - [ ] Deploy automático: Vercel + Render + Neon a partir do GitHub Actions
-- [ ] Calendário de safra com dados das ofertas (US14)
-- [ ] Previsão de preço com IA a partir do histórico de pedidos
+- [ ] Previsão de preço com IA, treinada na mesma série de pedidos que a projeção atual usa
 - [ ] Recuperação de senha por e-mail
 
 ---

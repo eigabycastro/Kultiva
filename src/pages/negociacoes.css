@@ -291,3 +291,33 @@
     width: 32px;
   }
 }
+
+/* Conversa vazia / nenhuma conversa escolhida */
+.chat__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+.chat__empty svg {
+  color: var(--icon-brand);
+}
+.chat__hint {
+  text-align: center;
+  padding: 24px 0;
+}
+.chat__send:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 768px) {
+  .chat__list {
+    flex: 1;
+    border-right: 0;
+    padding-top: calc(16px + env(safe-area-inset-top));
+  }
+}

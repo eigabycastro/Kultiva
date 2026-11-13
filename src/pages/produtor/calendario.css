@@ -202,3 +202,10 @@
     border-radius: 50%;
   }
 }
+a.cal-ev {
+  display: block;
+  text-decoration: none;
+}
+a.cal-ev:hover {
+  filter: brightness(0.95);
+}

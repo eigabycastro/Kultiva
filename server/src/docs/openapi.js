@@ -49,6 +49,8 @@ export const openapi = {
     { name: 'Ofertas', description: 'CRUD do produtor e busca do varejista' },
     { name: 'Pedidos', description: 'Regra de negócio: status + baixa de estoque' },
     { name: 'Procura-se', description: 'CRUD de demandas do varejista + match' },
+    { name: 'Negociação (chat)', description: 'Mensagens entre produtor e varejista' },
+    { name: 'Planejamento', description: 'Calendário de safra e previsão de preço do produtor' },
     { name: 'Notificações' },
     { name: 'Favoritos' },
     { name: 'Dashboard' },
@@ -85,7 +87,14 @@ export const openapi = {
         ok: json({ type: 'object', properties: { cep: { type: 'string' }, endereco: { type: 'string' }, cidade: { type: 'string' }, uf: { type: 'string' }, latitude: { type: 'number' }, longitude: { type: 'number' } } }),
       }),
     },
-    '/api/produtos': { get: op('Apoio', 'Catálogo de produtos', { ok: json({ type: 'array', items: ref('Produto') }) }) },
+    '/api/produtos': {
+      get: op('Apoio', 'Catálogo de produtos', { ok: json({ type: 'array', items: ref('Produto') }) }),
+      post: op('Apoio', 'Cadastrar produto que não está no catálogo (nome repetido reaproveita o existente)', {
+        body: { type: 'object', required: ['nome', 'categoria', 'unidadePadrao'], properties: { nome: { type: 'string', example: 'Pimentão vermelho' }, categoria: { type: 'string', example: 'Legumes' }, unidadePadrao: { type: 'string', example: 'kg' } } },
+        status: 201,
+        ok: json(ref('Produto')),
+      }),
+    },
 
     '/api/propriedades': {
       get: op('Propriedades', 'Listar minhas propriedades', { perfis: 'PRODUTOR', ok: json({ type: 'array', items: ref('Propriedade') }) }),
@@ -189,6 +198,30 @@ export const openapi = {
       }),
     },
 
+    '/api/mensagens/conversas': {
+      get: op('Negociação (chat)', 'Minhas conversas com a última mensagem e as não lidas', { perfis: 'PRODUTOR, VAREJISTA', params: [q('q', undefined, 'Filtrar pelo nome do contato')] }),
+    },
+    '/api/mensagens/{usuarioId}': {
+      get: op('Negociação (chat)', 'Mensagens da conversa (marca as recebidas como lidas) e a oferta negociada', {
+        perfis: 'PRODUTOR, VAREJISTA',
+        params: [{ ...id, name: 'usuarioId' }, q('oferta', { type: 'integer' }, 'Oferta que abriu a conversa')],
+      }),
+      post: op('Negociação (chat)', 'Enviar mensagem (notifica o destinatário)', {
+        perfis: 'PRODUTOR, VAREJISTA',
+        params: [{ ...id, name: 'usuarioId' }],
+        body: { type: 'object', required: ['texto'], properties: { texto: { type: 'string', example: 'Tem tomate para sexta?' }, ofertaId: { type: 'integer' } } },
+        status: 201,
+      }),
+    },
+    '/api/calendario': {
+      get: op('Planejamento', 'Eventos do mês: colheitas, fim de ofertas e entregas', { perfis: 'PRODUTOR', params: [q('mes', { type: 'string', example: '2026-11' })] }),
+    },
+    '/api/previsao': {
+      get: op('Planejamento', 'Preço semanal praticado (6 semanas) + projeção por tendência (3 semanas) e dicas', {
+        perfis: 'PRODUTOR',
+        params: [q('produtoId', { type: 'integer' })],
+      }),
+    },
     '/api/notificacoes': {
       get: op('Notificações', 'Listar (com contagem por tipo)', {
         params: [q('tipo', { type: 'string', enum: ['DEMANDA', 'PEDIDO', 'MENSAGEM', 'PRECO', 'SISTEMA'] }), q('naoLidas', { type: 'boolean' }), ...paginas],
