@@ -25,7 +25,17 @@ export function criarApp() {
   app.disable('x-powered-by')
   app.set('trust proxy', 1) // na Vercel o IP real vem no X-Forwarded-For (usado pelo limite de tentativas de login)
   app.use(helmet({ contentSecurityPolicy: false })) // CSP desligado só para o Swagger UI carregar
-  app.use(cors({ origin: config.corsOrigin }))
+  app.use(cors({
+    origin: config.corsOrigin,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'apikey',
+      'x-client-info'
+    ],
+    optionsSuccessStatus: 204
+  }))  
   app.use(express.json({ limit: '100kb' }))
 
   app.get('/', (_req, res) => res.redirect('/docs'))
